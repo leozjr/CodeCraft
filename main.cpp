@@ -5,17 +5,19 @@
 #include <cmath>
 #include <cstring>
 #include<Windows.h>
-#include <chrono>
+#include<chrono>
 #include"Robot.h"
 #include"WorkTable.h"
 #include"IO.h"
 #include"MotionControl.h"
+#include"RobotManager.h"
 using namespace std;
 
 Robot robot[5];
 WorkTable table[52];
 IO io;
 MotionControl mc;
+RobotManager rm;
 
 int frameID;
 int money;
@@ -29,18 +31,14 @@ set<pair<float, pair<int, int> > > DistanceOrder_robot[5];
 vector<vector<vector<pair<float, float> > > > Road(60, vector<vector<pair<float, float> > >(55));
 
 int main() {
-	std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+	//Sleep(7000);
 	io.Initialization(robot, table, tableID_by_type, WorkTableNum, Road, DistanceOrder, DistanceOrder_robot);
-	std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
-	double elapsed_time = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time).count();
-	std::cerr << "Elapsed time: " << elapsed_time << " seconds" << std::endl;
-
-	//Sleep(8000);
-	
-	robot[0].SetRoad({ Road[0][12] });
+	robot[0].SetRoad({Road[0][16], Road[20][24]});
+	robot[0].SetTask({24,16});
 	while (!cin.eof()) {
 		int mapID = io.readUntilOK(frameID, money, WorkTableNum, robot, table, DistanceOrder_between_robot);
-		//rm.SingleManager_4(robot, table, frameID);
+		//rm.SingleManager(robot, table, Road, frameID);
+		robot[0].BuySellCheck(1, table);
 		mc.MakeOrder(robot, Order_1, Order_2);
 		io.writeUntilOK(frameID, Order_1, Order_2);
     }

@@ -188,7 +188,7 @@ bool Robot::UpdateInfo(int wt, int goods, float tvf, float cvf, float av, std::p
 	this->m_Direction = dir;
 	this->m_Pos = pos;
 	this->m_BuyOrSell = 0;
-	bool m_SuccTrans = false;
+	this->m_SuccTrans = false;
 	this->m_Stop = false;
 	return true;
 }

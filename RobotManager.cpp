@@ -57,6 +57,8 @@ void RobotManager::SingleManager(Robot * robots, WorkTable * tables, vector<vect
 					}
 				}
 			}
+			vector<vector<pair<float, float> > > st_road = { Road[i][goalTable[i]] };
+			robots[i].SetRoad(st_road);
 		}
 	}
 	else {
@@ -244,8 +246,8 @@ void RobotManager::SingleManager(Robot * robots, WorkTable * tables, vector<vect
 				}
 			}
 		}
+		this->GiveTask(robots, goalTable, Road);//如果实在是没地方去会怎么样？？？？？
 	}
-	this->GiveTask(robots, goalTable, Road);//如果实在是没地方去会怎么样？？？？？
 }
 
 void RobotManager::SingleManager_2(Robot * robots, WorkTable * tables, vector<vector<vector<pair<float, float> > > > & Road,int frameID) //优先级对调，不专门去拿4567
@@ -518,6 +520,7 @@ void RobotManager::SingleManager_2(Robot * robots, WorkTable * tables, vector<ve
 	}
 	this->GiveTask(robots, goalTable, Road);//如果实在是没地方去会怎么样？？？？？
 }
+
 
 void RobotManager::SingleManager_3(Robot * robots, WorkTable * tables, vector<vector<vector<pair<float, float> > > > & Road,int frameID) //设置了全图456的拿取
 {
