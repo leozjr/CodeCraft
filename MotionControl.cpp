@@ -304,17 +304,23 @@ float MotionControl::AnglePDcontrol(float angle_diff)
 
 bool MotionControl::HitWallCheck(pair<float, float> target_pos, pair<float, float> my_pos)
 {
-	float stop_dis = 2;
-	if (target_pos.first < stop_dis || target_pos.first > 50-stop_dis || target_pos.second < stop_dis || target_pos.second > 50 - stop_dis)
-	{
-		float dis = TargetDistance(target_pos, my_pos);
-		if (dis < this->m_WallSlowDownDis)
-			return true;
-		else
-			return false;
-	}
+	float dis = TargetDistance(target_pos, my_pos);
+	if (dis < this->m_WallSlowDownDis)
+		return true;
 	else
 		return false;
+
+	//float stop_dis = 2;
+	//if (target_pos.first < stop_dis || target_pos.first > 50-stop_dis || target_pos.second < stop_dis || target_pos.second > 50 - stop_dis)
+	//{
+	//	float dis = TargetDistance(target_pos, my_pos);
+	//	if (dis < this->m_WallSlowDownDis)
+	//		return true;
+	//	else
+	//		return false;
+	//}
+	//else
+	//	return false;
 }
 
 //ËÙ¶È¿ØÖÆ

@@ -77,7 +77,6 @@ bool IO::Cut(int & Type_1, int & Type_2) {
 	if (Type_1 < 3 && Type_2 < 3) return true;
 	return false;
 }
-
 void IO::CanGo(int Map[102][102]) //没有区分买卖前后
 {
 	for (int i = 0; i < 100; i++) {
@@ -98,28 +97,30 @@ void IO::CanGo(int Map[102][102]) //没有区分买卖前后
 				}
 			}
 			if (flag == 1) {
+				if (j + 2 > 99 || i + 2 > 99 || j - 2 < 0 || i - 2 < 0) {
+					this->CanGo_Map[i][j] = 1;
+					continue;
+				}
 				if (Map[i - 1][j - 1] == 1 || Map[i + 1][j - 1] == 1) { //左边堵住
-					if (j + 2 > 99) { //右边是墙
-						this->CanGo_Map[i][j] = 1;
-						continue;
-					}
-					if (Map[i - 1][j - 1] == 1 && Map[i - 1][j + 2] == 0 && Map[i][j + 2] == 0) {
+					if (Map[i - 1][j - 1] == 1 && Map[i - 1][j + 2] == 0 && Map[i][j + 2] == 0 && Map[i + 2][j - 1] == 0 && Map[i + 2][j] == 0) {
 						this->CanGo_Map[i][j] = 2; //2代表半点
 					}
-					else if (Map[i + 1][j - 1] == 1 && Map[i + 1][j + 2] == 0 && Map[i][j + 2] == 0) {
+					else if (Map[i + 1][j - 1] == 1 && Map[i + 1][j + 2] == 0 && Map[i][j + 2] == 0 && Map[i - 2][j - 1] == 0 && Map[i - 2][j] == 0) {
 						this->CanGo_Map[i][j] = 2;
+					}
+					else {
+						this->CanGo_Map[i][j] = 1;
 					}
 				}
-				else if(Map[i - 1][j + 1] == 1 || Map[i + 1][j + 1] == 1) { //右边堵住
-					if (j - 2 < 0) { //左边是墙
-						this->CanGo_Map[i][j] = 1;
-						continue;
-					}
-					if (Map[i - 1][j + 1] == 1 && Map[i - 1][j - 2] == 0 && Map[i][j - 2] == 0) {
+				else if (Map[i - 1][j + 1] == 1 || Map[i + 1][j + 1] == 1) { //右边堵住
+					if (Map[i - 1][j + 1] == 1 && Map[i - 1][j - 2] == 0 && Map[i][j - 2] == 0 && Map[i + 2][j + 1] == 0 && Map[i + 2][j] == 0) {
 						this->CanGo_Map[i][j] = 2; //2代表半点
 					}
-					else if (Map[i + 1][j + 1] == 1 && Map[i + 1][j - 2] == 0 && Map[i][j - 2] == 0) {
+					else if (Map[i + 1][j + 1] == 1 && Map[i + 1][j - 2] == 0 && Map[i][j - 2] == 0 && Map[i - 2][j + 1] == 0 && Map[i - 2][j] == 0) {
 						this->CanGo_Map[i][j] = 2;
+					}
+					else {
+						this->CanGo_Map[i][j] = 1;
 					}
 				}
 				else {

@@ -33,8 +33,8 @@ vector<vector<vector<pair<float, float> > > > Road(60, vector<vector<pair<float,
 int main() {
 	//Sleep(7000);
 	io.Initialization(robot, table, tableID_by_type, WorkTableNum, Road, DistanceOrder, DistanceOrder_robot);
-	robot[0].SetRoad({Road[0][16], Road[20][24]});
-	robot[0].SetTask({24,16});
+	robot[0].SetRoad({Road[0][16], Road[20][17]});
+	robot[0].SetTask({17,16});
 	while (!cin.eof()) {
 		int mapID = io.readUntilOK(frameID, money, WorkTableNum, robot, table, DistanceOrder_between_robot);
 		//rm.SingleManager(robot, table, Road, frameID);
