@@ -220,8 +220,9 @@ void MotionControl::TrackRoad(Robot& r)
 		{
 			//正常循迹，删除走过的路
 			r.SetNextV(this->CalTrackRoadV(r, road.back()));
-			if(TargetDistance(r.GetPos(), road.back()) < 1.5)
+			if (TargetDistance(r.GetPos(), road.back()) < 1.5) {
 				road.pop_back();
+			}
 		}
 		//到终点了
 		else if (road.size() == 1)
