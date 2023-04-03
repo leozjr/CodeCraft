@@ -3,6 +3,7 @@
 #include<set>
 #include<vector>
 #include<string>
+#include"IO.h"
 #include"Robot.h"
 #include"CongestionControl.h"
 class MotionControl
@@ -17,9 +18,11 @@ class MotionControl
 	float m_CollisionTurnPower = 3; //避障转向力度。最大M_PI
 	bool m_TurnRight; //避障向左还是向右
 
-	CongestionControl cc;
+	float m_TrackDistance = 1;
+
+	CongestionControl* cc;
 	void WhoNeedAvoidance(Robot* robots);
-	void TrackAvoidanceBack(Robot& robot);
+	void TrackAvoidanceBack(Robot& r, Robot& r_first_go);
 
 	//导航函数，计算四个机器人的速度矩阵，第一列为线速度，第二列为角速度
 	void Navigation(Robot* robots);
@@ -50,7 +53,7 @@ class MotionControl
 
 public:
 	// 根据速度矩阵制作Order1格式的输出命令
-	void MakeOrder(Robot* robots, std::vector<std::pair<std::string, std::pair<int, float> > >& Order_1, std::vector<std::pair<std::string, int> >& Order_2);
+	void MakeOrder(Robot* robots, std::vector<std::pair<std::string, std::pair<int, float> > >& Order_1, std::vector<std::pair<std::string, int> >& Order_2, CongestionControl* cc);
 
 };
 

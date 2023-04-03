@@ -22,9 +22,10 @@ class IO
 	float m_gap = 0.5; //¸ñ×Ó¼ä¾à
 	vector<A_Point *> open;
 	vector<A_Point *> close;
-	int CanGo_Map[102][102];
+	
 
 public:
+	int CanGo_Map[102][102];
 	int InListFlag(vector<A_Point*>& lt, pair<float, float> pos);
 	float G_Calculate(A_Point * ap, pair<float, float> pos);
 	float H_Calculate(pair <float, float> end, pair<float, float> pos);

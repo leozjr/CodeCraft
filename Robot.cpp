@@ -23,9 +23,13 @@ void Robot::SetAvoidance(bool flag)
 {
 	this->m_Avoidance = flag;
 }
+void Robot::SetCanPark(bool flag)
+{
+	this->m_CanPark = flag;
+}
 void Robot::SetAvoidID(int id)
 {
-	this->m_AvoidID;
+	this->m_AvoidID = id;
 }
 bool Robot::NeedStop()
 {
@@ -192,6 +196,11 @@ void Robot::DistanceSet(std::set<std::pair<float, std::pair<int, int> > > & ds)
 std::vector<std::pair<float, int> > Robot::GetRobotsDistance()
 {
 	return this->m_RobotsDistance;
+}
+
+bool Robot::CanPark()
+{
+	return this->m_CanPark;
 }
 
 

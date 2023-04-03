@@ -18,6 +18,7 @@ WorkTable table[52];
 IO io;
 MotionControl mc;
 RobotManager rm;
+CongestionControl cc(&io);
 
 int frameID;
 int money;
@@ -31,13 +32,13 @@ set<pair<float, pair<int, int> > > DistanceOrder_robot[5];
 vector<vector<vector<pair<float, float> > > > Road(60, vector<vector<pair<float, float> > >(55));
 
 int main() {
-	Sleep(7000);
+	Sleep(12000);
 	io.Initialization(robot, table, tableID_by_type, WorkTableNum, Road, DistanceOrder, DistanceOrder_robot);
 
-	vector<vector<vector<pair<float, float>>>> r1_task = { { Road[1][3], Road[7][10] } };
+	vector<vector<vector<pair<float, float>>>> r1_task = { { Road[1][3], Road[7][10] }, { Road[14][3], Road[7][10] } };
 	vector<vector<vector<pair<float, float>>>> r2_task = { { Road[2][4], Road[8][8] } };
 
-	vector<vector<int>> r1_buysell = { {10, 3} };
+	vector<vector<int>> r1_buysell = { {10, 3} ,{10,3} };
 	vector<vector<int>> r2_buysell = { {8, 4} };
 
 	robot[0].SetRoad({ Road[0][0], Road[4][5] });
@@ -54,8 +55,14 @@ int main() {
 		robot[1].BuySellCheck(1, table);
 		robot[2].BuySellCheck(1, table);
 
+		if (!robot[1].isBusy())
+		{
+			robot[1].SetRoad(r1_task[1]);
+			robot[1].SetTask(r1_buysell[1]);
+		}
+
 		robot[0].Stop();
-		mc.MakeOrder(robot, Order_1, Order_2);
+		mc.MakeOrder(robot, Order_1, Order_2, &cc);
 		io.writeUntilOK(frameID, Order_1, Order_2);
     }
     return 0;
