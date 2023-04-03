@@ -1,9 +1,10 @@
-#include "MotionControl.h"
-#include"Robot.h"
 #include<set>
 #include<vector>
 #define _USE_MATH_DEFINES
 #include<math.h>
+#include "MotionControl.h"
+#include"Robot.h"
+#include"CongestionControl.h"
 using namespace std;
 
 // 绝对坐标转相对坐标
@@ -110,27 +111,100 @@ bool SameDir(Robot& r1, Robot& r2)
 	return (min_angle_diff < 0.34);//20度代表同向
 }
 
+void MotionControl::WhoNeedAvoidance(Robot* robots)
+{
+	//检查所有的机器人，谁需要避让
+	for (int i = 0; i < this->m_RobotsNum; i++)
+	{
+		if (!robots[i].GetAvoidance())
+		{
+			for (int j = 0; j < this->m_RobotsNum; j++)
+			{
+				if (j != i)
+				{
+					if (this->cc.Congestion(robots[i].m_FutureRoad[0], robots[j].m_FutureRoad[0]))
+					{
+						//存在冲突，根据优先级确定谁需要避让
+						if (robots[i].GetGoods() <= robots[j].GetGoods())
+						{
+							robots[i].SetAvoidance(true);
+							robots[i].SetAvoidID(j);
+						}
+						else
+						{
+							robots[j].SetAvoidance(true);
+							robots[j].SetAvoidID(i);
+						}
+						
+					}
+				}
+			}
+		}
+	}
+}
+
+void MotionControl::TrackAvoidanceBack(Robot& r)
+{
+	static bool can_park = false;
+	//边走搜寻停靠点
+	if (!can_park)
+	{	
+		//往后开始循迹
+		r.SetNextV(this->CalTrackRoadV(r, r.m_PastRoad.back()));
+
+		if (TargetDistance(r.GetPos(), r.m_PastRoad.back()) < 1)
+		{
+			r.m_FutureRoad[0].push_back(r.m_PastRoad.back());
+			r.m_PastRoad.pop_back();
+
+			//同时搜索可以停靠的点
+			//vector<pair<float, float> > parking_road = this->cc.AvoidanceRoad(r.m_PastRoad.back());
+			//if (!parking_road.empty())
+			//{
+			//	//制作一个双向版本的路
+
+			//	can_park = true;
+			//}
+		}
+	}
+
+	if (can_park)
+	{
+		//开始循到泊车点
+
+
+		//检测对方已经通过，循回主路
+
+		//避让状态解除
+	}
+	
+}
+
 //导航流程控制
 void MotionControl::Navigation(Robot* robots)
 {
 	for (int i = 0; i < this->m_RobotsNum; i++)
 	{
-		//碰撞检测
-		bool collision = CollisionCheck(robots, i);
-		if (collision)
+		if (robots[i].GetAvoidance())
 		{
-			float linear_v = 6;
-
-			float angle_v;
-			//全力转弯
-			if (this->m_TurnRight)
-				angle_v = -1*this->m_CollisionTurnPower;
-			else
-				angle_v = m_CollisionTurnPower;
-
-			robots[i].SetNextV(make_pair(linear_v, angle_v));
-			
+			//该机器人处于避让状态
+			TrackAvoidanceBack(robots[i]);
 		}
+		//else if (CollisionCheck(robots, i))
+		//{
+		//	//VO 碰撞检测
+		//	float linear_v = 6;
+
+		//	float angle_v;
+		//	//全力转弯
+		//	if (this->m_TurnRight)
+		//		angle_v = -1*this->m_CollisionTurnPower;
+		//	else
+		//		angle_v = m_CollisionTurnPower;
+
+		//	robots[i].SetNextV(make_pair(linear_v, angle_v));
+		//	
+		//}
 		else
 		{
 			//循迹
@@ -204,33 +278,36 @@ pair<float, float> MotionControl::CalTrackRoadV(Robot& r, pair<float, float> tar
 //循迹
 void MotionControl::TrackRoad(Robot& r)
 {
-	if (!r.m_Road.empty())
+	if (!r.m_FutureRoad.empty())
 	{
 		//起个别名，不然名字太长了
-		vector<pair<float, float>>& road = r.m_Road[0]; //一条路
-		if (r.GetTransState()) 
+		vector<pair<float, float>>& future_road = r.m_FutureRoad[0]; //未来走的路
+		vector<pair<float, float>>& past_road = r.m_PastRoad; //走过的路
+		
+		if (r.GetTransState())
 		{
-			//交易成功，才清空路线
-			road.clear();
-			r.m_Road.erase(r.m_Road.begin());//删除该路线
+			future_road.clear();
+			r.m_FutureRoad.erase(r.m_FutureRoad.begin());//删除该路线
+			r.m_PastRoad.clear(); //清空历史，
 			return;
 		}
 		//到终点前
-		if (road.size() > 1)
+		if (future_road.size() > 1)
 		{
 			//正常循迹，删除走过的路
-			r.SetNextV(this->CalTrackRoadV(r, road.back()));
-			if (TargetDistance(r.GetPos(), road.back()) < 1.5) {
-				road.pop_back();
+			r.SetNextV(this->CalTrackRoadV(r, future_road.back()));
+			if (TargetDistance(r.GetPos(), future_road.back()) < 1) 
+			{
+				past_road.push_back(future_road.back()); //记录过去
+				future_road.pop_back(); //删掉未来
 			}
 		}
 		//到终点了
-		else if (road.size() == 1)
+		else if (future_road.size() == 1)
 		{
 			//只设目标，不删除最后这个点
-			r.SetNextV(this->CalTrackRoadV(r, road.back()));
+			r.SetNextV(this->CalTrackRoadV(r, future_road.back()));
 		}
-		
 	}
 	else
 	{
@@ -239,7 +316,6 @@ void MotionControl::TrackRoad(Robot& r)
 		return;
 	}
 }
-
 
 
 float MotionControl::AngleDiff(pair<float, float> target_pos, pair<float, float> robot_pos, float robot_dir)
@@ -343,7 +419,8 @@ float MotionControl::LinearPDcontrol(pair<float, float> target_pos, pair<float, 
 
 void MotionControl::MakeOrder(Robot* robots, vector<pair<string, pair<int, float> > >& Order_1, vector<pair<string, int > >& Order_2)
 {
-	Navigation(robots);
+	this->WhoNeedAvoidance(robots);
+	this->Navigation(robots); 
 	for (int i = 0; i < this->m_RobotsNum; i++)
 	{
 		if (robots[i].NeedStop())//只要前面有人用了robot.stop，不管是什么情况下用的，都会停

@@ -21,7 +21,9 @@ class Robot
 	// 新增参数
 	bool m_Busy = false; //忙标志位
 	bool m_Stop = false; //停标志位
-	bool m_SuccTrans = false;
+	bool m_SuccTrans = false; //交易成功标志位
+	bool m_Avoidance = false; //避让状态标志位
+	int m_AvoidID; //避让对象的ID是谁
 	int m_BuyOrSell = 0; //0：不买也不卖，1：卖， -1：买， 2:销毁
 	std::vector<int> m_Task; //上哪儿卖，从哪儿买。0:买家id, 1：卖家id；
 	std::vector<std::pair<float, int>> m_RobotsDistance; //机器人间距离
@@ -34,7 +36,8 @@ class Robot
 
 	std::pair<float, float> m_NextV; //下一帧的线速度和角速度，<linear_v, angle_v>
 public:
-	std::vector<std::vector<std::pair<float, float> >> m_Road; //路径
+	std::vector<std::vector<std::pair<float, float> >> m_FutureRoad; //没走的路
+	std::vector<std::pair<float, float> > m_PastRoad; //走过的路，用来回退用
 
 	/*-------查询函数------*/
 	int GetID(); //ID
@@ -44,12 +47,16 @@ public:
 	int GetGoods(); // 携带货物状态 0为未携带，1234567为正在携带对应类型的货物
 	std::pair<float, float> GetNextV();
 	bool GetTransState(); //获取交易状态
+	bool GetAvoidance(); //获取避让状态
+	int GetAvoidID();
 	std::vector<int> GetTask(); //任务状态
+	int GetBuyorSell(); //查询买卖指令
+	std::vector<std::pair<float, int>> GetRobotsDistance(); //查询机器人间距离
 	bool isBusy(); //是否忙碌
 	
 	//主函数调用
 	void BuySellCheck(int type, WorkTable* wts); //任务的买卖检查，到目标地点后是否需要买卖【type：1是买卖绑定；2是买卖分离】
-	
+
 	/*------IO类用的------*/
 	void Init(int id); //初始化id
 	bool UpdateInfo(int wt, int goods, float tvf, float cvf, float av, std::pair<float, float> lv, float dir, std::pair<float, float> pos);
@@ -66,8 +73,9 @@ public:
 	
 	/*-----给mc用的-----*/
 	void SetNextV(std::pair<float, float> next_v);
+	void SetAvoidance(bool flag); //设置机器人进入或退出避让状态
+	void SetAvoidID(int id);
 	bool NeedStop(); // 是否发出停指令
-	int GetBuyorSell(); //查询买卖指令
-	std::vector<std::pair<float, int>> GetRobotsDistance(); //查询机器人间距离
+	
 };
 

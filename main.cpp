@@ -31,14 +31,30 @@ set<pair<float, pair<int, int> > > DistanceOrder_robot[5];
 vector<vector<vector<pair<float, float> > > > Road(60, vector<vector<pair<float, float> > >(55));
 
 int main() {
-	//Sleep(7000);
+	Sleep(7000);
 	io.Initialization(robot, table, tableID_by_type, WorkTableNum, Road, DistanceOrder, DistanceOrder_robot);
-	robot[0].SetRoad({Road[0][16], Road[20][17]});
-	robot[0].SetTask({17,16});
+
+	vector<vector<vector<pair<float, float>>>> r1_task = { { Road[1][3], Road[7][10] } };
+	vector<vector<vector<pair<float, float>>>> r2_task = { { Road[2][4], Road[8][8] } };
+
+	vector<vector<int>> r1_buysell = { {10, 3} };
+	vector<vector<int>> r2_buysell = { {8, 4} };
+
+	robot[0].SetRoad({ Road[0][0], Road[4][5] });
+	robot[0].SetTask({5, 0});
+
+	robot[1].SetRoad(r1_task[0]);
+	robot[1].SetTask(r1_buysell[0]);
+	robot[2].SetRoad(r2_task[0]);
+	robot[2].SetTask(r2_buysell[0]);
+
 	while (!cin.eof()) {
 		int mapID = io.readUntilOK(frameID, money, WorkTableNum, robot, table, DistanceOrder_between_robot);
 		//rm.SingleManager(robot, table, Road, frameID);
-		robot[0].BuySellCheck(1, table);
+		robot[1].BuySellCheck(1, table);
+		robot[2].BuySellCheck(1, table);
+
+		robot[0].Stop();
 		mc.MakeOrder(robot, Order_1, Order_2);
 		io.writeUntilOK(frameID, Order_1, Order_2);
     }

@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CongestionControl.cpp" />
     <ClCompile Include="IO.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MotionControl.cpp" />
@@ -135,6 +136,7 @@
     <ClCompile Include="WorkTable.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CongestionControl.h" />
     <ClInclude Include="IO.h" />
     <ClInclude Include="MotionControl.h" />
     <ClInclude Include="Robot.h" />

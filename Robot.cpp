@@ -19,6 +19,14 @@ void Robot::SetNextV(std::pair<float, float> next_v)
 	this->m_NextV = next_v;
 }
 
+void Robot::SetAvoidance(bool flag)
+{
+	this->m_Avoidance = flag;
+}
+void Robot::SetAvoidID(int id)
+{
+	this->m_AvoidID;
+}
 bool Robot::NeedStop()
 {
 	return this->m_Stop;
@@ -31,11 +39,11 @@ void Robot::SetTask(std::vector<int> task)
 
 void Robot::SetRoad(std::vector<std::vector<std::pair<float, float> > > road)
 {
-	this->m_Road.clear();
+	this->m_FutureRoad.clear();
 	//逆序，为了mc中好pop_back
 	for (auto &i : road)
 		std::reverse(i.begin(), i.end());
-	this->m_Road = road;
+	this->m_FutureRoad = road;
 }
 
 void Robot::ClearTask()
@@ -109,6 +117,16 @@ std::pair<float, float> Robot::GetNextV()
 bool Robot::GetTransState()
 {
 	return this->m_SuccTrans;
+}
+
+bool Robot::GetAvoidance()
+{
+	return this->m_Avoidance;
+}
+
+int Robot::GetAvoidID()
+{
+	return this->m_AvoidID;
 }
 
 std::vector<int> Robot::GetTask()

@@ -4,9 +4,10 @@
 #include<vector>
 #include<string>
 #include"Robot.h"
+#include"CongestionControl.h"
 class MotionControl
 {
-	int m_RobotsNum = 1;
+	int m_RobotsNum = 3;
 	float m_MaxSpeed = 6;
 	float m_WallSpeed = 1; //墙边目标限速
 	float m_WallSlowDownDis = 1; //提前减速距离
@@ -15,6 +16,10 @@ class MotionControl
 	float m_MinLimitDistace = 2; //最小碰撞检测距离
 	float m_CollisionTurnPower = 3; //避障转向力度。最大M_PI
 	bool m_TurnRight; //避障向左还是向右
+
+	CongestionControl cc;
+	void WhoNeedAvoidance(Robot* robots);
+	void TrackAvoidanceBack(Robot& robot);
 
 	//导航函数，计算四个机器人的速度矩阵，第一列为线速度，第二列为角速度
 	void Navigation(Robot* robots);
