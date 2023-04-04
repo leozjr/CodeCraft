@@ -9,6 +9,7 @@ class RobotManager
 {
 	bool m_TableFlagBuy[52];
 	bool m_TableFlagSell[52][10];
+	bool m_InitalFlagBuy[5];
 	bool SevenFlag = false;
 	std::multiset<int> m_ChooseTable;
 	std::vector<std::multiset<int> > m_ChooseTable2;
@@ -38,9 +39,9 @@ public:
 	void SetChooseTable_4(WorkTable * tables, Robot * robots);
 	void SetChooseTable_3(WorkTable * tables);
 	void SetChooseTable_2(WorkTable * tables, Robot * robots);
-	void SetChooseTable(WorkTable* tables);
-	void SetTargetTable(WorkTable * tables, Robot * robots);
-	void SetTargetTable_2(WorkTable * tables, Robot * robots);
+	void SetChooseTable(WorkTable* tables, vector<vector<vector<pair<float, float> > > > & Road);
+	void SetTargetTable(WorkTable * tables, Robot * robots, vector<vector<vector<pair<float, float> > > > & Road);
+	void SetTargetTable_2(WorkTable * tables, Robot * robots, vector<vector<vector<pair<float, float> > > > & Road);
 	void SetTargetTable_3(WorkTable * tables, Robot * robots);
 	bool CanSellTo9(int num, WorkTable * tables, Robot * robots, int * goal);
 };

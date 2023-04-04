@@ -10,30 +10,36 @@ using namespace std;
 
 void RobotManager::GiveTask(Robot * robots, int * goalTable, vector<vector<vector<pair<float, float> > > > & Road){
 	for (int i = 0; i < 4; i++) {
-		if (robots[i].isBusy()) continue;
+		if (robots[i].isBusy() || robots[i].GetTask().empty()) continue;
 		int id = robots[i].GetTask()[0];
 		if (robots[i].GetBuyorSell() == -1) {
-			this->m_TableFlagBuy[id] = false;
+			if (this->m_InitalFlagBuy[i]) {
+				this->m_InitalFlagBuy[i] = false;
+			}
+			else this->m_TableFlagBuy[id] = false;
 		}
-		else if (robots[i].GetBuyorSell() == 1)
+		else if (robots[i].GetBuyorSell() == 1 && robots[i].GetGoods() > 0)
 		{
 			this->m_TableFlagSell[id][robots[i].GetGoods() - 1] = false;
 			this->m_SellTable[id] -= int(pow(2, robots[i].GetGoods()));
 		}
 		if (goalTable[i] != -1) {
+			robots[i].SetWait(0); //µÈ´ý¸´Î»
 			vector<int> vt_task = { goalTable[i] };
 			robots[i].SetTask(vt_task);
 			if (goalTable[i] < id) {
-				vector<vector<pair<float, float> > > st_road = { Road[goalTable[i] + 4][id] };
+				vector<pair<float, float> > vtt(Road[goalTable[i] + 4][id]);
+				reverse(vtt.begin(), vtt.end());
+				vector<vector<pair<float, float> > > st_road ({ vtt });
 				robots[i].SetRoad(st_road);
 			}
 			else if (goalTable[i] > id) {
-				vector<vector<pair<float, float> > > st_road = { Road[id + 4][goalTable[i]] };
+				vector<vector<pair<float, float> > > st_road({ Road[id + 4][goalTable[i]] });
 				robots[i].SetRoad(st_road);
 			}
 		}
 		else {
-			robots[i].ClearTask();
+			robots[i].SetWait(robots[i].GetBuyorSell());
 		}
 	}
 }
@@ -57,12 +63,28 @@ void RobotManager::SingleManager(Robot * robots, WorkTable * tables, vector<vect
 					}
 				}
 			}
-			vector<vector<pair<float, float> > > st_road = { Road[i][goalTable[i]] };
-			robots[i].SetRoad(st_road);
+			if (goalTable[i] == -1) {
+				for (it = st.begin(); it != st.end(); it++) {
+					if ((*it).second.second >= 0 && (*it).second.second <= 2) {
+						int temp = (*it).second.first;
+						goalTable[i] = temp;
+						this->m_InitalFlagBuy[i] = true;
+						break;
+					}
+				}
+			}
+			if (goalTable[i] != -1)
+			{
+				vector<int> vt_task = { goalTable[i] };
+				robots[i].SetTask(vt_task);
+				vector<vector<pair<float, float> > > st_road({ Road[i][goalTable[i]] });
+				robots[i].SetRoad(st_road);
+			}
+
 		}
 	}
 	else {
-		SetChooseTable(tables); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
+		SetChooseTable(tables, Road); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
 		for (int i = 0; i < 4; i++) {
 			if (robots[i].isBusy()) continue;
 			int id = robots[i].GetTask()[0];
@@ -273,7 +295,7 @@ void RobotManager::SingleManager_2(Robot * robots, WorkTable * tables, vector<ve
 		}
 	}
 	else {
-		SetChooseTable(tables); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
+		SetChooseTable(tables, Road); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
 		for (int i = 0; i < 4; i++) {
 			if (robots[i].isBusy()) continue;
 			int id = robots[i].GetTask()[0];
@@ -545,8 +567,8 @@ void RobotManager::SingleManager_3(Robot * robots, WorkTable * tables, vector<ve
 		}
 	}
 	else {
-		SetChooseTable(tables); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
-		SetTargetTable(tables, robots);
+		SetChooseTable(tables, Road); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
+		SetTargetTable(tables, robots, Road);
 		for (int i = 0; i < 4; i++) {
 			if (robots[i].isBusy()) continue;
 			int id = robots[i].GetTask()[0];
@@ -847,7 +869,7 @@ void RobotManager::SingleManager_4(Robot * robots, WorkTable * tables, vector<ve
 		}
 	}
 	else {
-		SetChooseTable(tables); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
+		SetChooseTable(tables, Road); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
 		for (int i = 0; i < 4; i++) {
 			if (robots[i].isBusy()) continue;
 			int id = robots[i].GetTask()[0];
@@ -1160,7 +1182,7 @@ void RobotManager::SingleManager_5(Robot * robots, WorkTable * tables, vector<ve
 		}
 	}
 	else {
-		SetChooseTable(tables); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
+		SetChooseTable(tables, Road); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
 		for (int i = 0; i < 4; i++) {
 			if (robots[i].isBusy()) continue;
 			int id = robots[i].GetTask()[0];
@@ -1245,7 +1267,7 @@ void RobotManager::SingleManager_5(Robot * robots, WorkTable * tables, vector<ve
 	this->GiveTask(robots, goalTable, Road);//Èç¹ûÊµÔÚÊÇÃ»µØ·½È¥»áÔõÃ´Ñù£¿£¿£¿£¿£¿
 }
 
-void RobotManager::SingleManager_6(Robot * robots, WorkTable * tables, vector<vector<vector<pair<float, float> > > > & Road,int frameID) //123²»ÉÏËø+Ë³µÀÂò¶«Î÷
+void RobotManager::SingleManager_6(Robot * robots, WorkTable * tables, vector<vector<vector<pair<float, float> > > > & Road,int frameID) //
 {
 	float t1;
 	float t2;
@@ -1268,10 +1290,10 @@ void RobotManager::SingleManager_6(Robot * robots, WorkTable * tables, vector<ve
 		}
 	}
 	else {
-		SetChooseTable_2(tables, robots); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
-		SetTargetTable_2(tables, robots); //2
+		SetChooseTable(tables, Road); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
+		SetTargetTable_2(tables, robots, Road); //2
 		for (int i = 0; i < 4; i++) {
-			if (robots[i].isBusy()) continue;
+			if (robots[i].isBusy() || robots[i].GetTask().empty()) continue;
 			int id = robots[i].GetTask()[0];
 			int flag = 0;
 			//this->m_TableFlag[id] = false; //ÂòÂôÖ®ºó¾Í²»Õ¼ÓÃÁË
@@ -1447,44 +1469,57 @@ void RobotManager::SingleManager_6(Robot * robots, WorkTable * tables, vector<ve
 				}
 			}
 			else if (robots[i].GetBuyorSell() == 1) { //¸ÕÂô»õ
-				int GTID = robots[i].GetTask()[0];
-				int GT = tables[GTID].GetType();
-				if ((!this->m_TableFlagBuy[GTID]) && tables[GTID].HaveProduct() && (this->m_ChooseTable.count(GT) > 0 || GT == 6)) {
-					//Order_2.push_back(make_pair("buy", GTID));
-					goalTable[i] = GTID;
-					this->m_TableFlagBuy[GTID] = true;
-					int num = this->m_ChooseTable.count(GT);
-					this->m_ChooseTable.erase(GT);
-					for (int cc = 1; cc < num; cc++) {
-						this->m_ChooseTable.insert(GT);
-					}
-				}
-				else {
-					int flag = 0;
-					int tyy;
-					for (int j = 1; j <= 3; j++) { //ËÑË÷Èý´Î£¬·Ö±ðÎª7£¬456£¬123
-						if (flag == 1) break;
-						for (it = st.begin(); it != st.end(); it++) {
-							int ty = (*it).second.second;
-							if (j == 1 && ty == 6) {
+				int flag = 0;
+				int tyy;
+				for (int j = 1; j <= 3; j++) { //ËÑË÷Èý´Î£¬·Ö±ðÎª7£¬456£¬123
+					if (flag == 1) break;
+					for (it = st.begin(); it != st.end(); it++) {
+						int ty = (*it).second.second;
+						if (j == 1 && ty == 6) {
+							int temp = (*it).second.first;
+							t1 = tables[temp].CountDownFrameGet() / 50.0;
+							t2 = (*it).first / speed;
+							if ((!this->m_TableFlagBuy[temp]) && (tables[temp].HaveProduct() || (tables[temp].CountDownFrameGet() >= 0 && t1 < t2))) {
+								goalTable[i] = temp;
+								this->m_TableFlagBuy[temp] = true;
+								flag = 1;
+								break;
+							}
+						}
+						else if (j == 2 && (ty >= 3 && ty <= 5)) {
+							if (this->m_ChooseTable.count(ty) > 0) {
 								int temp = (*it).second.first;
 								t1 = tables[temp].CountDownFrameGet() / 50.0;
 								t2 = (*it).first / speed;
-								if ((!this->m_TableFlagBuy[temp]) && (tables[temp].HaveProduct() && (tables[temp].CountDownFrameGet() >= 0 && t1 < t2)) && tables[temp].NeedWhat().size() == 0) {
+								if ((!this->m_TableFlagBuy[temp]) && (tables[temp].HaveProduct() || (tables[temp].CountDownFrameGet() >= 0 && t1 < t2))) {
 									goalTable[i] = temp;
 									this->m_TableFlagBuy[temp] = true;
+									int num = this->m_ChooseTable.count(ty);
+									this->m_ChooseTable.erase(ty);
+									for (int cc = 1; cc < num; cc++) {
+										this->m_ChooseTable.insert(ty);
+									}
 									flag = 1;
 									break;
 								}
 							}
-							else if (j == 2 && (ty >= 3 && ty <= 5)) {
-								if (this->m_ChooseTable.count(ty) > 0) {
-									int temp = (*it).second.first;
-									t1 = tables[temp].CountDownFrameGet() / 50.0;
-									t2 = (*it).first / speed;
-									if ((!this->m_TableFlagBuy[temp]) && (tables[temp].HaveProduct() || (tables[temp].CountDownFrameGet() >= 0 && t1 < t2)) && tables[temp].NeedWhat().size() == 0) {
+						}
+						else if (j == 3 && (ty >= 0 && ty <= 2)) {
+							if (this->m_ChooseTable.count(ty) > 0) {
+								int temp = (*it).second.first;
+								t1 = tables[temp].CountDownFrameGet() / 50.0;
+								t2 = (*it).first / speed;
+								if ((!this->m_TableFlagBuy[temp]) && (tables[temp].HaveProduct() || (tables[temp].CountDownFrameGet() >= 0 && t1 < t2))) {
+									if (flag == 0) {
 										goalTable[i] = temp;
+										flag = 3;
+										tyy = ty;
+									}
+									if (this->m_TargetTable[ty] > 0) {
+										goalTable[i] = temp;
+										flag = 2;
 										this->m_TableFlagBuy[temp] = true;
+										this->m_TargetTable[ty] = m_TargetTable[ty] - 1;
 										int num = this->m_ChooseTable.count(ty);
 										this->m_ChooseTable.erase(ty);
 										for (int cc = 1; cc < num; cc++) {
@@ -1495,40 +1530,15 @@ void RobotManager::SingleManager_6(Robot * robots, WorkTable * tables, vector<ve
 									}
 								}
 							}
-							else if (j == 3 && (ty >= 0 && ty <= 2)) {
-								if (this->m_ChooseTable.count(ty) > 0) {
-									int temp = (*it).second.first;
-									t1 = tables[temp].CountDownFrameGet() / 50.0;
-									t2 = (*it).first / speed;
-									if (tables[temp].HaveProduct() || (tables[temp].CountDownFrameGet() >= 0 && t1 < t2)) {
-										if (flag == 0) {
-											goalTable[i] = temp;
-											flag = 3;
-											tyy = ty;
-										}
-										if (this->m_TargetTable[ty] > 0) {
-											goalTable[i] = temp;
-											flag = 2;
-											this->m_TargetTable[ty] = m_TargetTable[ty] - 1;
-											int num = this->m_ChooseTable.count(ty);
-											this->m_ChooseTable.erase(ty);
-											for (int cc = 1; cc < num; cc++) {
-												this->m_ChooseTable.insert(ty);
-											}
-											flag = 1;
-											break;
-										}
-									}
-								}
-							}
 						}
 					}
-					if (flag == 3) {
-						int num = this->m_ChooseTable.count(tyy);
-						this->m_ChooseTable.erase(tyy);
-						for (int cc = 1; cc < num; cc++) {
-							this->m_ChooseTable.insert(tyy);
-						}
+				}
+				if (flag == 3) {
+					this->m_TableFlagBuy[goalTable[i]] = true;
+					int num = this->m_ChooseTable.count(tyy);
+					this->m_ChooseTable.erase(tyy);
+					for (int cc = 1; cc < num; cc++) {
+						this->m_ChooseTable.insert(tyy);
 					}
 				}
 			}
@@ -1561,7 +1571,7 @@ void RobotManager::SingleManager_7(Robot * robots, WorkTable * tables, vector<ve
 	}
 	else {
 		SetChooseTable_3(tables); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
-		SetTargetTable(tables, robots);
+		SetTargetTable(tables, robots, Road);
 		for (int i = 0; i < 4; i++) {
 			if (robots[i].isBusy()) continue;
 			int id = robots[i].GetTask()[0];
@@ -1867,7 +1877,7 @@ void RobotManager::SingleManager_8(Robot * robots, WorkTable * tables, vector<ve
 	}
 	else {
 		SetChooseTable_5(tables, AccessID_0, AccessID_1, AccessID_2, AccessID_3); //Âò¶«Î÷Ö»ÄÜ´ÓÖÐÑ¡Ôñ
-		SetTargetTable(tables, robots);
+		SetTargetTable(tables, robots, Road);
 		for (int i = 0; i < 4; i++) {
 			if (robots[i].isBusy()) continue;
 			int id = robots[i].GetTask()[0];
@@ -2356,20 +2366,22 @@ void RobotManager::SetChooseTable_3(WorkTable * tables) //Ã»ÓÐ7µÄÊ±ºòÓÃµÄ
 	this->m_ChooseTable.insert(5);
 }
 
-void RobotManager::SetChooseTable(WorkTable * tables)
+void RobotManager::SetChooseTable(WorkTable * tables, vector<vector<vector<pair<float, float> > > > & Road) ///ÓÐÎÊÌâ£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡
 {
 	this->m_ChooseTable.clear();
 	for (int i = 0; i < this->m_TableNum; i++) {
-		int temp = this->m_TypeTable[i] - (tables[i].GetMaterialState() | this->m_SellTable[i]);
-		int iter = 0;
-		while (true) {
-			temp = temp >> 1;
-			if (temp <= 0) break;
-			if (temp % 2) {
-				this->m_ChooseTable.insert(iter); //ÀàÐÍ´Ó0¿ªÊ¼
+		if (i == 0 || Road[4][i].size() != 0) {
+			int temp = this->m_TypeTable[i] - (tables[i].GetMaterialState() | this->m_SellTable[i]);
+			int iter = 0;
+			while (true) {
+				temp = temp >> 1;
+				if (temp <= 0) break;
+				if (temp % 2) {
+					this->m_ChooseTable.insert(iter); //ÀàÐÍ´Ó0¿ªÊ¼
+				}
+				iter++;
 			}
-			iter++;
-		}
+		}	
 	}
 	for (int i = 0; i < this->m_TableNum; i++) {
 		if (this->m_TableFlagBuy[i] && tables[i].GetType() < 6) {
@@ -2405,40 +2417,48 @@ void RobotManager::SetChooseTable_2(WorkTable * tables, Robot * robots) //123²»É
 		}
 	}
 	for (int i = 0; i < 4; i++) {
-		int id = robots[i].GetTask()[0];
-		int GTT = tables[id].GetType();
-		if (GTT >= 0 && GTT <= 2) {
-			int temp = this->m_ChooseTable.count(GTT);
-			this->m_ChooseTable.erase(GTT);
-			for (int j = 1; j < temp; j++) this->m_ChooseTable.insert(GTT);
+		if (!robots[i].GetTask().empty())
+		{
+			int id = robots[i].GetTask()[0];
+			int GTT = tables[id].GetType();
+			if (GTT >= 0 && GTT <= 2) {
+				int temp = this->m_ChooseTable.count(GTT);
+				this->m_ChooseTable.erase(GTT);
+				for (int j = 1; j < temp; j++) this->m_ChooseTable.insert(GTT);
+			}
 		}
+
 	}
 }
 
-void RobotManager::SetTargetTable(WorkTable * tables, Robot * robots) { //´ÓÈ«¾ÖµÄ½Ç¶ÈÉè¶¨Ó¦¸ÃÂôµ½ÄÄ¶ù
+void RobotManager::SetTargetTable(WorkTable * tables, Robot * robots, vector<vector<vector<pair<float, float> > > > & Road) { //´ÓÈ«¾ÖµÄ½Ç¶ÈÉè¶¨Ó¦¸ÃÂôµ½ÄÄ¶ù
 	this->m_TargetTable.clear();
 	for (int i = 0; i < this->m_TableNum; i++) {
-		if (tables[i].GetType() == 6) {
-			m_TargetTable[3] = m_TargetTable[3] + 1;
-			m_TargetTable[4] = m_TargetTable[4] + 1;
-			m_TargetTable[5] = m_TargetTable[5] + 1;
-			int iter = 0;
-			int temp = tables[i].GetMaterialState();
-			while (true) {
-				temp = temp >> 1;
-				if (temp <= 0) break;
-				if (temp % 2) {
-					m_TargetTable[iter] = m_TargetTable[iter] - 1;
+		if (i == 0 || Road[4][i].size() != 0) {
+			if (tables[i].GetType() == 6) {
+				m_TargetTable[3] = m_TargetTable[3] + 1;
+				m_TargetTable[4] = m_TargetTable[4] + 1;
+				m_TargetTable[5] = m_TargetTable[5] + 1;
+				int iter = 0;
+				int temp = tables[i].GetMaterialState();
+				while (true) {
+					temp = temp >> 1;
+					if (temp <= 0) break;
+					if (temp % 2) {
+						m_TargetTable[iter] = m_TargetTable[iter] - 1;
+					}
+					iter++;
 				}
-				iter++;
 			}
 		}
 	}
 	for (int i = 0; i < this->m_TableNum; i++) {
-		if (tables[i].GetType() >= 3 && tables[i].GetType() <= 5) {
-			int temp = tables[i].GetType();
-			if (tables[i].HaveProduct()) m_TargetTable[temp] = m_TargetTable[temp] - 1;
-			if (tables[i].CountDownFrameGet() >= 0) m_TargetTable[temp] = m_TargetTable[temp] - 1;
+		if (i == 0 || Road[4][i].size() != 0) {
+			if (tables[i].GetType() >= 3 && tables[i].GetType() <= 5) {
+				int temp = tables[i].GetType();
+				if (tables[i].HaveProduct()) m_TargetTable[temp] = m_TargetTable[temp] - 1;
+				if (tables[i].CountDownFrameGet() >= 0) m_TargetTable[temp] = m_TargetTable[temp] - 1;
+			}
 		}
 	}
 	for (int i = 0; i < 4; i++) { ///////ÓÐÎÊÌâ£¡£¡£¡£¡£¡µ«ÊÇ·Ö¸ß
@@ -2449,33 +2469,37 @@ void RobotManager::SetTargetTable(WorkTable * tables, Robot * robots) { //´ÓÈ«¾Ö
 	}
 }
 
-void RobotManager::SetTargetTable_2(WorkTable * tables, Robot * robots) { //´ÓÈ«¾ÖµÄ½Ç¶ÈÉè¶¨Ó¦¸ÃÂò1£¬2£¬3
+void RobotManager::SetTargetTable_2(WorkTable * tables, Robot * robots, vector<vector<vector<pair<float, float> > > > & Road) { //´ÓÈ«¾ÖµÄ½Ç¶ÈÉè¶¨Ó¦¸ÃÂò1£¬2£¬3
 	int flagg[5] = { 0 };
 	std::set<int> max_st;
 	this->m_TargetTable.clear();
 	for (int i = 0; i < this->m_TableNum; i++) {
-		if (tables[i].GetType() >= 3 && tables[i].GetType() <= 5) {
-			int temp = tables[i].GetType();
-			if (tables[i].HaveProduct()) m_TargetTable[temp] = m_TargetTable[temp] + 1;
-			if (tables[i].CountDownFrameGet() >= 0) m_TargetTable[temp] = m_TargetTable[temp] + 1;
-		}
-		else if (tables[i].GetType() == 6) {
-			int iter = 0;
-			int temp = tables[i].GetMaterialState();
-			while (true) {
-				temp = temp >> 1;
-				if (temp <= 0) break;
-				if (temp % 2) {
-					m_TargetTable[iter] = m_TargetTable[iter] + 1;
+		if (i == 0 || Road[4][i].size() != 0) {
+			if (tables[i].GetType() >= 3 && tables[i].GetType() <= 5) {
+				int temp = tables[i].GetType();
+				if (tables[i].HaveProduct()) m_TargetTable[temp] = m_TargetTable[temp] + 1;
+				if (tables[i].CountDownFrameGet() >= 0) m_TargetTable[temp] = m_TargetTable[temp] + 1;
+			}
+			else if (tables[i].GetType() == 6) {
+				int iter = 0;
+				int temp = tables[i].GetMaterialState();
+				while (true) {
+					temp = temp >> 1;
+					if (temp <= 0) break;
+					if (temp % 2) {
+						m_TargetTable[iter] = m_TargetTable[iter] + 1;
+					}
+					iter++;
 				}
-				iter++;
 			}
 		}
 	}
 	for (int i = 0; i < 4; i++) {
-		if (robots[i].GetGoods() >= 4 && robots[i].GetGoods() <= 6) {
-			int temp = robots[i].GetGoods() - 1;
-			m_TargetTable[temp] = m_TargetTable[temp] + 1;
+		if (i == 0 || Road[4][i].size() != 0) {
+			if (robots[i].GetGoods() >= 4 && robots[i].GetGoods() <= 6) {
+				int temp = robots[i].GetGoods() - 1;
+				m_TargetTable[temp] = m_TargetTable[temp] + 1;
+			}
 		}
 	}
 	for (int i = 0; i < 3; i++) {
@@ -2492,18 +2516,20 @@ void RobotManager::SetTargetTable_2(WorkTable * tables, Robot * robots) { //´ÓÈ«
 		}
 	}
 	for (int i = 0; i < this->m_TableNum; i++) {
-		if (tables[i].GetType() >= 3 && tables[i].GetType() <= 5 && m_TargetTable[tables[i].GetType()] > 0) {
-			if ((tables[i].GetMaterialState() | this->m_SellTable[i]) > 0) {
-				flagg[tables[i].GetType() - 3] = 1;
-				int temp = this->m_TypeTable[i] - (tables[i].GetMaterialState() | this->m_SellTable[i]);
-				int iter = 0;
-				while (true) {
-					temp = temp >> 1;
-					if (temp <= 0) break;
-					if (temp % 2) {
-						m_TargetTable[iter] = m_TargetTable[iter] + 1; //ÀàÐÍ´Ó0¿ªÊ¼
+		if (i == 0 || Road[4][i].size() != 0) {
+			if (tables[i].GetType() >= 3 && tables[i].GetType() <= 5 && m_TargetTable[tables[i].GetType()] > 0) {
+				if ((tables[i].GetMaterialState() | this->m_SellTable[i]) > 0) {
+					flagg[tables[i].GetType() - 3] = 1;
+					int temp = this->m_TypeTable[i] - (tables[i].GetMaterialState() | this->m_SellTable[i]);
+					int iter = 0;
+					while (true) {
+						temp = temp >> 1;
+						if (temp <= 0) break;
+						if (temp % 2) {
+							m_TargetTable[iter] = m_TargetTable[iter] + 1; //ÀàÐÍ´Ó0¿ªÊ¼
+						}
+						iter++;
 					}
-					iter++;
 				}
 			}
 		}

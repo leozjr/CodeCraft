@@ -8,7 +8,7 @@
 #include"CongestionControl.h"
 class MotionControl
 {
-	int m_RobotsNum = 3;
+	int m_RobotsNum = 4;
 	float m_MaxSpeed = 6;
 	float m_WallSpeed = 1; //墙边目标限速
 	float m_WallSlowDownDis = 1; //提前减速距离
@@ -45,6 +45,8 @@ class MotionControl
 	
 	//撞墙检查
 	bool HitWallCheck(std::pair<float, float> target_pos, std::pair<float, float> my_pos);
+	//
+	bool LagCheck(Robot& r, Robot* others);
 
 	// 输出角速度计算
 	float AnglePDcontrol(float angle_diff);

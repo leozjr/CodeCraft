@@ -14,6 +14,11 @@ void Robot::Stop()
 	this->m_Stop = true;
 }
 
+void Robot::SetInvincible(bool flag)
+{
+	this->m_Invincible = flag;
+}
+
 void Robot::SetNextV(std::pair<float, float> next_v)
 {
 	this->m_NextV = next_v;
@@ -92,19 +97,32 @@ void Robot::BuySellCheck(int type, WorkTable* wts)
 		}
 	}
 	else if (type == 2) {
-		if (!this->m_Task.empty())
+		if (this->m_Wait != 0) { //如果暂停，等待新的任务
+			this->m_Busy = false;
+			if (this->m_Wait == 1) {
+				this->Sell();
+			}
+			else if (this->m_Wait == -1) {
+				this->Buy();
+			}
+		}
+		else if (!this->m_Task.empty())
 		{
 			this->m_Busy = true;//我忙了,因为我任务表没完成
 			if (this->GetGoods() == 0 && this->Reached()) { //没货物，准备去买
-				this->Buy();
-				this->m_Busy = false;
+				if (wts[this->m_Task.back()].HaveProduct())
+				{
+					this->Buy();
+					//this->m_SuccTrans = true; // 成功交易标志位，给mc判断是否继续前进用的
+					this->m_Busy = false;
+				}
 			}
-			else if (this->GetGoods() > 0 && this->Reached()){ //有货物，准备去卖
+			else if (this->GetGoods() > 0 && this->Reached()) { //有货物，准备去卖
 				this->Sell();
-				this->m_Busy = false;
+				//this->m_SuccTrans = true; // 成功交易标志位，给mc判断是否继续前进用的
+				this->m_Busy = false;// task列表此时为空，任务完成，Busy标志解除
 			}
 		}
-
 	}
 }
 
@@ -128,6 +146,11 @@ bool Robot::GetAvoidance()
 	return this->m_Avoidance;
 }
 
+bool Robot::GetInvincible()
+{
+	return this->m_Invincible;
+}
+
 int Robot::GetAvoidID()
 {
 	return this->m_AvoidID;
@@ -141,6 +164,11 @@ std::vector<int> Robot::GetTask()
 bool Robot::Reached()
 {
 	return (this->m_WorkTableID == this->m_Task.back());
+}
+
+void Robot::SetWait(int sw)
+{
+	this->m_Wait = sw;
 }
 
 int Robot::GetID()

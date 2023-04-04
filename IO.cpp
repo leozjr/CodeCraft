@@ -10,6 +10,7 @@
 #include "IO.h"
 #include"Robot.h"
 #include"WorkTable.h"
+#include"RobotManager.h"
 using namespace std;
 
 float IO::distance(const pair<float, float> & pos1, const pair<float, float> & pos2) {
@@ -226,7 +227,7 @@ void IO::A_Star(Robot * robot, WorkTable * table, float n_max, float m_max, int 
 	}
 }
 
-void IO::Initialization(Robot * robot,WorkTable * table, vector<vector<int> > & tableID_by_type, int & WorkTableNum, vector<vector<vector<pair<float, float> > > > & Road, set<pair<float, pair<int, int> > > * DistanceOrder, set<pair<float, pair<int, int> > > * DistanceOrder_robot) {
+void IO::Initialization(RobotManager & rm, Robot * robot,WorkTable * table, vector<vector<int> > & tableID_by_type, int & WorkTableNum, vector<vector<vector<pair<float, float> > > > & Road, set<pair<float, pair<int, int> > > * DistanceOrder, set<pair<float, pair<int, int> > > * DistanceOrder_robot) {
 	int mapID;
 	int iter = 0;
 	int iter_robot = 0;
@@ -251,7 +252,7 @@ void IO::Initialization(Robot * robot,WorkTable * table, vector<vector<int> > & 
 				iter_robot++;
 			}
 			else if (line[i] >= '1' && line[i] <= '9') {
-				//if (line[i] == '7') rm.SetSevenFlag(true); //有7号
+				if (line[i] == '7') rm.SetSevenFlag(true); //有7号
 				InitialWorkTablePos.push_back(make_pair(0.25 + 0.5*i, 49.75 - 0.5*iter));
 				WorkTableType.push_back(line[i] - '1');
 				this->TableIDByType(line[i], iter_table, tableID_by_type);
@@ -313,6 +314,8 @@ void IO::Initialization(Robot * robot,WorkTable * table, vector<vector<int> > & 
 	default:
 		break;
 	}
+	rm.InitialTypeTable(WorkTableType); //初始化工作类型表
+	rm.SingleManager(robot, table, Road, 0); //初始化决策
 	cout << "OK";
 	cout << flush;
 }
@@ -363,6 +366,7 @@ int IO::readUntilOK(int & frameID, int & money, int & WorkTableNum, Robot * robo
 		cin >> WhichWorkTable >> ProductionType >> TimeIndex >> CrashIndex >> RotSpeed >> LineSpeed.first >> LineSpeed.second >> Direction >> RobotPos.first >> RobotPos.second;
 		cin.get();
 		robot[i].UpdateInfo(WhichWorkTable, ProductionType, TimeIndex, CrashIndex, RotSpeed, LineSpeed, Direction, RobotPos);
+		robot[i].BuySellCheck(2, table);
 	}
 
 	// 机器人距离更新

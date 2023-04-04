@@ -3,6 +3,7 @@
 #include <map>
 #include "Robot.h"
 #include "WorkTable.h"
+#include "RobotManager.h"
 using namespace std;
 
 struct A_Point
@@ -33,7 +34,7 @@ public:
 	void CanGo(int Map[102][102]);
 	void A_Star(Robot * robot, WorkTable * table, float n_max, float m_max, int Map[102][102], vector<pair<float, float> > & InitialRobotPos, vector<pair<float, float> > & InitialWorkTablePos, vector<vector<vector<pair<float, float> > > > & Road, map<pair<int, int>, float> & Distance);
 
-	void Initialization(Robot * robot, WorkTable * table, vector<vector<int>>& tableID_by_type, int & WorkTableNum, vector<vector<vector<pair<float, float> > > > & Road, set<pair<float, pair<int, int> > > * DistanceOrder, set<pair<float, pair<int, int> > > * DistanceOrder_robot);
+	void Initialization(RobotManager & rm, Robot * robot, WorkTable * table, vector<vector<int>>& tableID_by_type, int & WorkTableNum, vector<vector<vector<pair<float, float> > > > & Road, set<pair<float, pair<int, int> > > * DistanceOrder, set<pair<float, pair<int, int> > > * DistanceOrder_robot);
 	
 	float distance(const pair<float, float> & pos1, const pair<float, float> & pos2);
 	void TableIDByType(char type, int id, vector<vector<int> > & tableID_by_type);
