@@ -25,7 +25,7 @@ class Robot
 	int m_Wait = 0; //买卖分离决策需要
 	bool m_Avoidance = false; //避让状态标志位
 	int m_AvoidID; //避让对象的ID是谁
-	bool m_Invincible; //无人能挡
+	bool m_PriorityPass; //优先同行权
 
 	bool m_CanPark = false;
 	int m_BuyOrSell = 0; //0：不买也不卖，1：卖， -1：买， 2:销毁
@@ -46,6 +46,7 @@ public:
 	std::vector<std::pair<float, float> > m_ParkFutureRoad; //前往避让点的没走到路
 	std::vector<std::pair<float, float> > m_ParkPastRoad; //避让中的走过的路
 	bool EndPark = false; //停止泊车，可以返回
+	std::pair<float, float> EndPriorityPass; //结束优先通行权标志
 	
 
 	/*-------查询函数------*/
@@ -57,7 +58,7 @@ public:
 	std::pair<float, float> GetNextV();
 	bool GetTransState(); //获取交易状态
 	bool GetAvoidance(); //获取避让状态
-	bool GetInvincible();
+	bool GetPriorityPass();
 	int GetAvoidID();
 	std::vector<int> GetTask(); //任务状态
 	int GetBuyorSell(); //查询买卖指令
@@ -84,7 +85,7 @@ public:
 	std::set<std::pair<float, std::pair<int, int> > > DistanceGet(); //得到初始机器人与工作台距离
 	
 	/*-----给mc用的-----*/
-	void SetInvincible(bool flag); // 设置无敌状态，最高通行权
+	void SetPriorityPass(bool flag); // 设置无敌状态，最高通行权
 	void SetNextV(std::pair<float, float> next_v);
 	void SetAvoidance(bool flag); //设置机器人进入或退出避让状态
 	void SetCanPark(bool flag);

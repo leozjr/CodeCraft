@@ -46,7 +46,7 @@ void CongestionControl::Road_DFS(vector<std::pair<float, float>> & vt_road, vect
 float CongestionControl::distance(std::pair<float, float> & pos1, std::pair<float, float> & pos2) {
 	return sqrt(pow(pos1.first - pos2.first, 2) + pow(pos1.second - pos2.second, 2));
 }
-bool CongestionControl::Congestion(std::vector<std::pair<float, float> >& path1, int id1, std::vector<std::pair<float, float> >& path2, int id2, int type)
+int CongestionControl::Congestion(std::vector<std::pair<float, float> >& path1, int id1, std::vector<std::pair<float, float> >& path2, int id2, int type)
 {
 	if (type == 1) {
 		reverse(path1.begin(), path1.end());
@@ -84,33 +84,31 @@ bool CongestionControl::Congestion(std::vector<std::pair<float, float> >& path1,
 		return false;
 	}
 	else if (type == 2) {
-		int max_length = min(10, int(path1.size())); //最多搜索10个点
+		int iter = 0;
 		int end1 = path1.size() - 1;
 		int end2 = path2.size() - 1;
-		max_length = min(max_length, int(path2.size()));
 		float max_dis = 1.0; //点距阈值
-		for (int i = max_length - 1; i >= 3; i--) {
-			if (distance(path1[end1], path2[end2]) < max_dis && distance(path1[end1-i], path2[end2-i]) < max_dis) { //确定首尾是否重合
-				int iter = i - 1;
-				while (iter > 0) {
-					if (distance(path1[end1 - iter], path2[end2 - iter]) < max_dis) {
-						iter--;
-					}
-					else
-					{
-						return false;
-					}
-				}
-				return true;
+		while (true) {
+			if (iter <= end1 && iter <= end2 && distance(path1[end1 - iter], path2[end2 - iter]) < max_dis) {
+				iter++;
+			}
+			else
+			{
+				break;
 			}
 		}
-		return false;
+		if (iter < 5) {
+			return 0;
+		}
+		else {
+			return iter;
+		}
 	}
 }
 
 bool CongestionControl::CanGo(std::pair<float, float> my_pos, int id)
 {
-	return (this->distance(my_pos, this->m_LeaveCongestionPoint[id]) < 1);
+	return (this->distance(my_pos, this->m_LeaveCongestionPoint[id]) < 2);
 }
 
 std::vector<std::pair<float, float>> CongestionControl::AvoidanceRoad(std::pair<float, float> my_pos, vector<std::pair<float, float>> & path, std::pair<float, float> my_pos2, std::pair<float, float> your_pos)

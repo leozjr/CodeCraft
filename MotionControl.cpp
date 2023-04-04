@@ -118,9 +118,16 @@ void MotionControl::WhoNeedAvoidance(Robot* robots)
 {
 	for (int i = 0; i < this->m_RobotsNum; i++)
 	{
-		if (this->cc->Congestion(robots[i].m_FutureRoad[0], i, robots[i].m_PastRoad, i, 2))
+		if (robots[i].GetTask().empty()) continue;
+		//将来路与过去路重合的人，具有优先通行权
+		if (!robots[i].GetPriorityPass())
 		{
-			robots[i].SetInvincible(true);
+			int num = this->cc->Congestion(robots[i].m_FutureRoad[0], i, robots[i].m_PastRoad, i, 2);
+			if (num > 0)
+			{
+				robots[i].EndPriorityPass = robots[i].m_FutureRoad[0][robots[i].m_FutureRoad[0].size() - num];
+				robots[i].SetPriorityPass(true);
+			}
 		}
 	}
 
@@ -143,7 +150,7 @@ void MotionControl::WhoNeedAvoidance(Robot* robots)
 
 					//存在冲突，根据优先级确定谁需要避让
 					if (robots[i].GetAvoidance()) {
-						if (this->cc->Congestion(robots[j].m_FutureRoad[0], i, robots[j].m_PastRoad, j, 2)) {
+						if (robots[j].GetPriorityPass()) {
 							robots[j].Stop();
 						}
 						else {
@@ -152,7 +159,7 @@ void MotionControl::WhoNeedAvoidance(Robot* robots)
 						}
 					}
 					else if (robots[j].GetAvoidance()) {
-						if (this->cc->Congestion(robots[i].m_FutureRoad[0], i, robots[i].m_PastRoad, j, 2)) {
+						if (robots[i].GetPriorityPass()) {
 							robots[i].Stop();
 						}
 						else {
@@ -160,11 +167,11 @@ void MotionControl::WhoNeedAvoidance(Robot* robots)
 							robots[i].SetAvoidID(j);
 						}
 					}
-					else if (this->cc->Congestion(robots[i].m_FutureRoad[0], i, robots[i].m_PastRoad, j, 2)) {
+					else if (robots[i].GetPriorityPass()) {
 						robots[j].SetAvoidance(true);
 						robots[j].SetAvoidID(i);
 					}
-					else if (this->cc->Congestion(robots[j].m_FutureRoad[0], i, robots[j].m_PastRoad, j, 2)) {
+					else if (robots[j].GetPriorityPass()) {
 						robots[i].SetAvoidance(true);
 						robots[i].SetAvoidID(j);
 					}
@@ -201,7 +208,7 @@ void MotionControl::TrackAvoidanceBack(Robot& r, Robot& r_first_go)
 			if (!r.m_ParkFutureRoad.empty())
 			{
 				this->cc->m_LeaveCongestionPoint[r_first_go.GetID()] = r.m_PastRoad.back();
-				//保存逆向路，泊车标志位为真，之后不再搜索路线
+				//泊车标志位为真，之后不再搜索路线
 				r.SetCanPark(true);
 			}
 		}
@@ -373,6 +380,13 @@ void MotionControl::TrackRoad(Robot& r)
 			if (TargetDistance(r.GetPos(), future_road.back()) < this->m_TrackDistance)
 			{
 				past_road.push_back(future_road.back()); //记录过去
+				
+				//释放优先权
+				if (r.GetPriorityPass() && future_road.back() == r.EndPriorityPass)
+				{
+					r.SetPriorityPass(false);
+				}
+
 				future_road.pop_back(); //删掉未来
 			}
 		}

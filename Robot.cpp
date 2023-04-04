@@ -14,9 +14,9 @@ void Robot::Stop()
 	this->m_Stop = true;
 }
 
-void Robot::SetInvincible(bool flag)
+void Robot::SetPriorityPass(bool flag)
 {
-	this->m_Invincible = flag;
+	this->m_PriorityPass = flag;
 }
 
 void Robot::SetNextV(std::pair<float, float> next_v)
@@ -146,9 +146,9 @@ bool Robot::GetAvoidance()
 	return this->m_Avoidance;
 }
 
-bool Robot::GetInvincible()
+bool Robot::GetPriorityPass()
 {
-	return this->m_Invincible;
+	return this->m_PriorityPass;
 }
 
 int Robot::GetAvoidID()
