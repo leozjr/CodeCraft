@@ -232,18 +232,32 @@ void MotionControl::TrackAvoidanceBack(Robot& r, Robot& r_first_go)
 		{
 			//在泊车点等待
 			r.SetNextV(this->CalTrackRoadV(r, r.m_ParkFutureRoad.back()));
-
 		}
-
-
 	}
 	
 	if (r.EndPark)
 	{
-		if (!r.m_ParkPastRoad.empty())
+		if (!r.m_ParkFutureRoad.empty())
+		{
+			//还是会先走完parkFutureRoad，然后
+			r.SetNextV(this->CalTrackRoadV(r, r.m_ParkFutureRoad.back()));
+			if (TargetDistance(r.GetPos(), r.m_ParkFutureRoad.back()) < this->m_TrackDistance)
+			{
+				r.m_ParkPastRoad.push_back(r.m_ParkFutureRoad.back());
+				r.m_ParkFutureRoad.pop_back();
+			}
+		}
+		else if(r.m_ParkPastRoad.size() > 1)
 		{
 			r.SetNextV(this->CalTrackRoadV(r, r.m_ParkPastRoad.back()));
 			if (TargetDistance(r.GetPos(), r.m_ParkPastRoad.back()) < this->m_TrackDistance)
+				r.m_ParkPastRoad.pop_back();
+		}
+		else if (r.m_ParkPastRoad.size() == 1)
+		{
+			//解除避让状态，必须非常精确的回到避让点才予以解除
+			r.SetNextV(this->CalTrackRoadV(r, r.m_ParkPastRoad.back()));
+			if (TargetDistance(r.GetPos(), r.m_ParkPastRoad.back()) < 0.5)
 				r.m_ParkPastRoad.pop_back();
 		}
 		else
@@ -352,18 +366,68 @@ pair<float, float> MotionControl::CalTrackRoadV(Robot& r, pair<float, float> tar
 	float angle_diff = this->AngleDiff(target_point, r.GetPos(), r.GetDir());
 
 	float angle_v = this->AnglePDcontrol(angle_diff);
-	float linear_v = this->LinearPDcontrol(target_point, r.GetPos(), abs(angle_diff));
+	float linear_v = this->LinearPDcontrol(r, abs(angle_diff));
 	return make_pair(linear_v, angle_v);
 }
+
+//机器人跳点解决方法
+void MotionControl::JumpPointSolver(Robot& r)
+{
+	//在前N个点中取最近的一个
+	int n = min(6, int(r.m_FutureRoad[0].size()));
+	if (n == 0)
+		return;
+
+	auto min_iter = r.m_FutureRoad[0].end();
+	float min_dist = std::numeric_limits<float>::max(); // 初始化最小距离为float的最大值
+	for (auto iter = r.m_FutureRoad[0].end() - n; iter != r.m_FutureRoad[0].end(); ++iter) {
+		float dist = TargetDistance(r.GetPos(), (*iter));
+		if (dist < min_dist) {
+			min_dist = dist; // 更新最小距离
+			min_iter = iter; // 更新最小距离对应的迭代器
+		}
+	}
+
+	while (r.m_FutureRoad[0].end()-1 != min_iter) {
+		r.m_PastRoad.push_back(r.m_FutureRoad[0].back()); 
+		r.m_FutureRoad[0].pop_back(); 
+	}
+
+}
+
+//靠近卡口检测 -1不是卡口，0是进入，1是出卡口
+int MotionControl::NearChasm(Robot& r)
+{
+
+
+	//pair<int, int> now_pos = make_pair((49.75 - my_pos.second) * 2, (my_pos.first - 0.25) * 2);
+	return false;
+}
+
+//在经过卡口的时候，需要补两个点，并且控制的粒度要变小
+void MotionControl::CrossChasmSolver(Robot& r)
+{
+	if (this->NearChasm(r) == 0)
+	{
+		//刚进卡口，补点，开精准控制
+	}
+	else
+	{
+		//出卡口，关精准控制
+	}
+	
+}
+
 
 //循迹
 void MotionControl::TrackRoad(Robot& r)
 {
 	if (!r.m_FutureRoad.empty())
 	{
-		//起个别名，不然名字太长了
+		//起个别名
 		vector<pair<float, float>>& future_road = r.m_FutureRoad[0]; //未来走的路
 		vector<pair<float, float>>& past_road = r.m_PastRoad; //走过的路
+		vector<pair<float, float>> part_past_road; // 部分过去路
 		
 		if (r.GetTransState())
 		{
@@ -375,18 +439,39 @@ void MotionControl::TrackRoad(Robot& r)
 		//到终点前
 		if (future_road.size() > 1)
 		{
-			//正常循迹，删除走过的路
+			//循迹
+
+			//偏离路径后，跳点的检查及解决
+			this->JumpPointSolver(r);
+
+			//过卡口补点
+
 			r.SetNextV(this->CalTrackRoadV(r, future_road.back()));
 			if (TargetDistance(r.GetPos(), future_road.back()) < this->m_TrackDistance)
 			{
-				past_road.push_back(future_road.back()); //记录过去
-				
 				//释放优先权
-				if (r.GetPriorityPass() && future_road.back() == r.EndPriorityPass)
+				if (r.GetPriorityPass())
 				{
-					r.SetPriorityPass(false);
+					int idx = min(int(r.m_PastRoad.size()-1), 30);
+					part_past_road.assign(r.m_PastRoad.end()-idx, r.m_PastRoad.end());
+					if (future_road.back() == r.EndPriorityPass)
+					{
+						r.SetPriorityPass(false);
+						r.EndPriorityNumber = 0;
+					}
+					else if (!this->cc->AvoidanceRoad(r.m_FutureRoad[0].back(), part_past_road, r.GetPos(), make_pair(100, 100)).empty())
+					{
+						r.EndPriorityNumber += 1;
+					}
+					
+					if (r.EndPriorityNumber > 3)
+					{
+						r.SetPriorityPass(false);
+						r.EndPriorityNumber = 0;
+					}
+					
 				}
-
+				past_road.push_back(future_road.back()); //记录过去
 				future_road.pop_back(); //删掉未来
 			}
 		}
@@ -466,27 +551,6 @@ float MotionControl::AnglePDcontrol(float angle_diff)
 	return angle_output;
 }
 
-bool MotionControl::HitWallCheck(pair<float, float> target_pos, pair<float, float> my_pos)
-{
-	float dis = TargetDistance(target_pos, my_pos);
-	if (dis < this->m_WallSlowDownDis)
-		return true;
-	else
-		return false;
-
-	//float stop_dis = 2;
-	//if (target_pos.first < stop_dis || target_pos.first > 50-stop_dis || target_pos.second < stop_dis || target_pos.second > 50 - stop_dis)
-	//{
-	//	float dis = TargetDistance(target_pos, my_pos);
-	//	if (dis < this->m_WallSlowDownDis)
-	//		return true;
-	//	else
-	//		return false;
-	//}
-	//else
-	//	return false;
-}
-
 bool MotionControl::LagCheck(Robot& r, Robot* others)
 {
 	float lag_speed = 0.2;
@@ -504,16 +568,15 @@ bool MotionControl::LagCheck(Robot& r, Robot* others)
 }
 
 //速度控制
-float MotionControl::LinearPDcontrol(pair<float, float> target_pos, pair<float, float> my_pos, float angle)
+float MotionControl::LinearPDcontrol(Robot& r, float angle)
 {
 	float lv;
-
 	if (angle < 3/M_PI)
 	{
-		if (!HitWallCheck(target_pos, my_pos))
-			lv = this->m_MaxSpeed;
+		if (!r.GetEarlyBrake())
+			lv = r.GetMaxSpeed();
 		else
-			lv = this->m_WallSpeed;//墙边目标限速
+			lv = r.GetReachSpeed();//到达目标限速
 	}
 	else
 		lv = 0;

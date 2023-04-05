@@ -4,6 +4,12 @@
 #include<deque>
 #include "Robot.h"
 
+// 距离计算
+float TableDistance(std::pair<float, float> target_pos, std::pair<float, float> robot_pos)
+{
+	return sqrt(pow(target_pos.first - robot_pos.first, 2) + pow(target_pos.second - robot_pos.second, 2));
+}
+
 void Robot::Init(int id)
 {
 	this->m_ID = id;
@@ -12,6 +18,21 @@ void Robot::Init(int id)
 void Robot::Stop()
 {
 	this->m_Stop = true;
+}
+
+void Robot::SetPrecisionControl(bool flag)
+{
+	if (flag)
+	{
+		this->m_PrecisionControl = false;
+		this->m_MaxSpeed = 6;
+	}
+	else
+	{
+		this->m_PrecisionControl = true;
+		this->m_MaxSpeed = this->m_PrecisionSpeed;
+	}
+
 }
 
 void Robot::SetPriorityPass(bool flag)
@@ -72,6 +93,9 @@ void Robot::BuySellCheck(int type, WorkTable* wts)
 	if (type == 1) { //买卖绑定
 		if (!this->m_Task.empty())
 		{
+			// 到达前减速检测
+			this->EarlyBrake(wts[this->m_Task.back()].GetPos(), this->m_Pos);
+
 			this->m_Busy = true;//我忙了,因为我任务表没完成
 			if (this->m_Task.size() == 2 && this->Reached())
 			{
@@ -108,6 +132,9 @@ void Robot::BuySellCheck(int type, WorkTable* wts)
 		}
 		else if (!this->m_Task.empty())
 		{
+			// 到达前减速检测
+			this->EarlyBrake(wts[this->m_Task.back()].GetPos(), this->m_Pos);
+
 			this->m_Busy = true;//我忙了,因为我任务表没完成
 			if (this->GetGoods() == 0 && this->Reached()) { //没货物，准备去买
 				if (wts[this->m_Task.back()].HaveProduct())
@@ -164,6 +191,28 @@ std::vector<int> Robot::GetTask()
 bool Robot::Reached()
 {
 	return (this->m_WorkTableID == this->m_Task.back());
+}
+
+//到达工作台前提前减速
+void Robot::EarlyBrake(std::pair<float, float> target_pos, std::pair<float, float> my_pos)
+{
+	float dis = TableDistance(target_pos, my_pos);
+	if (dis < this->m_BrakeDistance)
+		this->m_EarlyBrake = true;
+	else
+		this->m_EarlyBrake = false;
+
+	//float stop_dis = 2;
+	//if (target_pos.first < stop_dis || target_pos.first > 50 - stop_dis || target_pos.second < stop_dis || target_pos.second > 50 - stop_dis)
+	//{
+	//	float dis = TargetDistance(target_pos, my_pos);
+	//	if (dis < this->m_BrakeDistance)
+	//		this->m_EarlyBrake = true;
+	//	else
+	//		this->m_EarlyBrake = false;
+	//}
+	//else
+	//	this->m_EarlyBrake = false;
 }
 
 void Robot::SetWait(int sw)
@@ -229,6 +278,26 @@ std::vector<std::pair<float, int> > Robot::GetRobotsDistance()
 bool Robot::CanPark()
 {
 	return this->m_CanPark;
+}
+
+bool Robot::GetPrecisionControl()
+{
+	return this->m_PrecisionControl;
+}
+
+bool Robot::GetEarlyBrake()
+{
+	return this->m_EarlyBrake;
+}
+
+float Robot::GetReachSpeed()
+{
+	return this->m_ReachSpeed;
+}
+
+float Robot::GetMaxSpeed()
+{
+	return this->m_MaxSpeed;
 }
 
 

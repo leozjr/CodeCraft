@@ -23,11 +23,20 @@ class Robot
 	bool m_Stop = false; //停标志位
 	bool m_SuccTrans = false; //交易成功标志位
 	int m_Wait = 0; //买卖分离决策需要
+
+	bool m_PriorityPass; //优先同行权
 	bool m_Avoidance = false; //避让状态标志位
 	int m_AvoidID; //避让对象的ID是谁
-	bool m_PriorityPass; //优先同行权
+	bool m_CanPark = false; //搜索到停车位的标志位
 
-	bool m_CanPark = false;
+	bool m_PrecisionControl = false; //精准控制标志位
+	float m_PrecisionSpeed = 3;
+
+	bool m_EarlyBrake = false; //到达工作台前提前刹车
+	float m_MaxSpeed = 6; //该机器人的最大速度（初始为6）
+	float m_ReachSpeed = 1; //墙边目标限速
+	float m_BrakeDistance = 1; //提前减速距离
+
 	int m_BuyOrSell = 0; //0：不买也不卖，1：卖， -1：买， 2:销毁
 	std::vector<int> m_Task; //上哪儿卖，从哪儿买。0:买家id, 1：卖家id；
 	std::vector<std::pair<float, int>> m_RobotsDistance; //机器人间距离
@@ -38,6 +47,8 @@ class Robot
 	void Destory(); //销毁货物指令，只给BuySellCheck()用
 	bool Reached(); //查询是否到达目标地点， 只给BuySellCheck()用
 
+	void EarlyBrake(std::pair<float, float> target_pos, std::pair<float, float> my_pos); // 提前刹车控制
+
 	std::pair<float, float> m_NextV; //要输出的线速度和角速度，<linear_v, angle_v>
 public:
 	std::vector<std::vector<std::pair<float, float> >> m_FutureRoad; //没走的路
@@ -46,7 +57,9 @@ public:
 	std::vector<std::pair<float, float> > m_ParkFutureRoad; //前往避让点的没走到路
 	std::vector<std::pair<float, float> > m_ParkPastRoad; //避让中的走过的路
 	bool EndPark = false; //停止泊车，可以返回
+	
 	std::pair<float, float> EndPriorityPass; //结束优先通行权标志
+	int EndPriorityNumber; //经过两个搜到的地方，就结束优先通行
 	
 
 	/*-------查询函数------*/
@@ -64,6 +77,10 @@ public:
 	int GetBuyorSell(); //查询买卖指令
 	std::vector<std::pair<float, int>> GetRobotsDistance(); //查询机器人间距离
 	bool CanPark();
+	bool GetPrecisionControl();
+	bool GetEarlyBrake(); //查询提前刹车
+	float GetReachSpeed(); //查询到达时限速距离
+	float GetMaxSpeed();
 	bool isBusy(); //是否忙碌
 	
 	//主函数调用
@@ -85,7 +102,8 @@ public:
 	std::set<std::pair<float, std::pair<int, int> > > DistanceGet(); //得到初始机器人与工作台距离
 	
 	/*-----给mc用的-----*/
-	void SetPriorityPass(bool flag); // 设置无敌状态，最高通行权
+	void SetPrecisionControl(bool flag); //精准控制模式，速度为4
+	void SetPriorityPass(bool flag); // 设置优先通行权
 	void SetNextV(std::pair<float, float> next_v);
 	void SetAvoidance(bool flag); //设置机器人进入或退出避让状态
 	void SetCanPark(bool flag);

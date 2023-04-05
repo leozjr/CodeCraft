@@ -9,9 +9,6 @@
 class MotionControl
 {
 	int m_RobotsNum = 4;
-	float m_MaxSpeed = 6;
-	float m_WallSpeed = 1; //墙边目标限速
-	float m_WallSlowDownDis = 1; //提前减速距离
 
 	float m_CollisionCheckVFactor = 0.8; //碰撞检测 速度加权系数，速度越大，应当有更大的碰撞预警范围
 	float m_MinLimitDistace = 2; //最小碰撞检测距离
@@ -37,21 +34,21 @@ class MotionControl
 	//循迹
 	void TrackRoad(Robot& robot);
 	std::pair<float, float> CalTrackRoadV(Robot& robot, std::pair<float, float> target_point);
+	void JumpPointSolver(Robot& r); //解决机器人提前出现在未来的点的情况，即跳点求解器
+	void CrossChasmSolver(Robot& r); //解决机器人穿越卡口时的卡顿问题
+	int NearChasm(Robot& r);
 
 	//计算航向差
 	float AngleDiff(std::pair<float, float> target_pos, std::pair<float, float> robot_pos, float robot_dir);
 	//角度差通用版本
 	float AngleDiff(std::pair<float, float> relative_pos, std::pair<float, float> relative_v);
 	
-	//撞墙检查
-	bool HitWallCheck(std::pair<float, float> target_pos, std::pair<float, float> my_pos);
-	//
 	bool LagCheck(Robot& r, Robot* others);
 
 	// 输出角速度计算
 	float AnglePDcontrol(float angle_diff);
 	// 输出线速度计算
-	float LinearPDcontrol(std::pair<float, float> target_pos, std::pair<float, float> my_pos, float angle);
+	float LinearPDcontrol(Robot& r, float angle);
 
 public:
 	// 根据速度矩阵制作Order1格式的输出命令
