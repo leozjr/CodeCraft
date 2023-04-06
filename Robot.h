@@ -57,6 +57,7 @@ public:
 	std::vector<std::pair<float, float> > m_ParkFutureRoad; //前往避让点的没走到路
 	std::vector<std::pair<float, float> > m_ParkPastRoad; //避让中的走过的路
 	bool EndPark = false; //停止泊车，可以返回
+	bool AllowJump = true; //允许跳点
 	
 	std::pair<float, float> EndPriorityPass; //结束优先通行权标志
 	int EndPriorityNumber; //经过两个搜到的地方，就结束优先通行
@@ -105,9 +106,8 @@ public:
 	void SetPrecisionControl(bool flag); //精准控制模式，速度为4
 	void SetPriorityPass(bool flag); // 设置优先通行权
 	void SetNextV(std::pair<float, float> next_v);
-	void SetAvoidance(bool flag); //设置机器人进入或退出避让状态
+	void SetAvoidance(bool flag, int avoid_id); //设置机器人进入或退出避让状态
 	void SetCanPark(bool flag);
-	void SetAvoidID(int id);
 	bool NeedStop(); // 是否发出停指令
 	
 };

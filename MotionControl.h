@@ -19,7 +19,7 @@ class MotionControl
 
 	CongestionControl* cc;
 	void WhoNeedAvoidance(Robot* robots);
-	void TrackAvoidanceBack(Robot& r, Robot& r_first_go);
+	void TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots);
 
 	//导航函数，计算四个机器人的速度矩阵，第一列为线速度，第二列为角速度
 	void Navigation(Robot* robots);
@@ -34,6 +34,7 @@ class MotionControl
 	//循迹
 	void TrackRoad(Robot& robot);
 	std::pair<float, float> CalTrackRoadV(Robot& robot, std::pair<float, float> target_point);
+	void KeepDistance(int my_id, Robot* others);
 	void JumpPointSolver(Robot& r); //解决机器人提前出现在未来的点的情况，即跳点求解器
 	void CrossChasmSolver(Robot& r); //解决机器人穿越卡口时的卡顿问题
 	int NearChasm(Robot& r);

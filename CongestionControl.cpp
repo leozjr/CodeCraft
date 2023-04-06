@@ -14,26 +14,38 @@ CongestionControl::CongestionControl()
 {
 }
 
-void CongestionControl::Road_DFS(std::vector<int> iter_i, std::vector<int> iter_j,vector<std::pair<float, float>> & vt_road, vector<std::pair<float, float>> & path, pair<int, int> now_pos, pair<float, float> & my_pos, pair<float, float> & your_pos) {
+void CongestionControl::Road_DFS(std::vector<int> iter_i, std::vector<int> iter_j,vector<std::pair<float, float>> & vt_road, vector<std::pair<float, float>> & path, pair<int, int> now_pos, pair<float, float> & my_pos, pair<float, float> & your_pos, vector<vector<std::pair<float, float>>>& others_road) {
 	pair<float, float> p = make_pair(0.25 + 0.5 * now_pos.second, 49.75 - 0.5 * now_pos.first);
-	int i = 0;
+	bool flag_t = false;
 	this->m_Flag[now_pos.first][now_pos.second] = true;
 	if (distance(my_pos, p) < distance(your_pos, p)) {
-		for (i = 0; i < path.size(); i++) {
+		for (int i = 0; i < path.size(); i++) {
 			if (distance(path[i], p) < 2) {
+				flag_t = true;
 				break;
 			}
 		}
-	}
-	if (i == path.size()) { //找到可以躲避的点
-		vt_road.push_back(p);
-		return;
+		if (!flag_t) {
+			for (int i = 0; i < others_road.size(); i++) {
+				for (int j = 0; j < others_road[i].size(); j++) {
+					if (distance(others_road[i][j], p) < 2) {
+						flag_t = true;
+						break;
+					}
+				}
+				if (flag_t) break;
+			}
+		}
+		if (!flag_t) { //找到可以躲避的点
+			vt_road.push_back(p);
+			return;
+		}
 	}
 	for (int i : iter_i) {
 		for (int j : iter_j) {
 			pair<int, int> pos = make_pair(now_pos.first + i, now_pos.second + j);
-			if (abs(pos.first - this->m_pos.first) < 4 && abs(pos.second - this->m_pos.second) < 4 && pos.first > 0 && pos.first < 100 && pos.second > 0 && pos.second < 100 && !this->m_Flag[pos.first][pos.second] && this->io->CanGo_Map[pos.first][pos.second] != 1) {
-				Road_DFS(iter_i,iter_j,vt_road, path, pos, my_pos, your_pos);
+			if (abs(pos.first - this->m_pos.first) < 8 && abs(pos.second - this->m_pos.second) < 8 && pos.first > 0 && pos.first < 100 && pos.second > 0 && pos.second < 100 && !this->m_Flag[pos.first][pos.second] && this->io->CanGo_Map[pos.first][pos.second] != 1) {
+				Road_DFS(iter_i,iter_j,vt_road, path, pos, my_pos, your_pos, others_road);
 				if (vt_road.size() != 0) {
 					vt_road.push_back(p);
 					return;
@@ -111,7 +123,7 @@ bool CongestionControl::CanGo(std::pair<float, float> my_pos, int id)
 	return (this->distance(my_pos, this->m_LeaveCongestionPoint[id]) < 2);
 }
 
-std::vector<std::pair<float, float>> CongestionControl::AvoidanceRoad(std::pair<float, float> my_pos, vector<std::pair<float, float>> & path, std::pair<float, float> my_pos2, std::pair<float, float> your_pos)
+std::vector<std::pair<float, float>> CongestionControl::AvoidanceRoad(std::pair<float, float> my_pos, vector<std::pair<float, float>> & path, std::pair<float, float> my_pos2, std::pair<float, float> your_pos, vector<vector<std::pair<float, float>>>& others_road)
 {
 	memset(this->m_Flag, false, sizeof(this->m_Flag));
 	vector<pair<float, float>> vt_road;
@@ -122,26 +134,26 @@ std::vector<std::pair<float, float>> CongestionControl::AvoidanceRoad(std::pair<
 	this->m_pos = now_pos;
 	vector<int> iterr = { -1,0,1 };
 	vector<int> iterr_reverse = { 1,0,-1 };
-	Road_DFS(iterr,iterr,vt_road_temp, path, now_pos, my_pos2, your_pos);
+	Road_DFS(iterr,iterr,vt_road_temp, path, now_pos, my_pos2, your_pos, others_road);
 	vt_road = vt_road_temp;
 
 	if(vt_road.empty()) return vt_road;
 
 	vt_road_temp.clear();
 	memset(this->m_Flag, false, sizeof(this->m_Flag));
-	Road_DFS(iterr, iterr_reverse, vt_road_temp, path, now_pos, my_pos2, your_pos);
+	Road_DFS(iterr, iterr_reverse, vt_road_temp, path, now_pos, my_pos2, your_pos, others_road);
 	if (!vt_road_temp.empty() && vt_road_temp.size() < vt_road.size()) {
 		vt_road = vt_road_temp;
 	}
 	vt_road_temp.clear();
 	memset(this->m_Flag, false, sizeof(this->m_Flag));
-	Road_DFS(iterr_reverse, iterr, vt_road_temp, path, now_pos, my_pos2, your_pos);
+	Road_DFS(iterr_reverse, iterr, vt_road_temp, path, now_pos, my_pos2, your_pos, others_road);
 	if (!vt_road_temp.empty() && vt_road_temp.size() < vt_road.size()) {
 		vt_road = vt_road_temp;
 	}
 	vt_road_temp.clear();
 	memset(this->m_Flag, false, sizeof(this->m_Flag));
-	Road_DFS(iterr_reverse, iterr_reverse, vt_road_temp, path, now_pos, my_pos2, your_pos);
+	Road_DFS(iterr_reverse, iterr_reverse, vt_road_temp, path, now_pos, my_pos2, your_pos, others_road);
 	if (!vt_road_temp.empty() && vt_road_temp.size() < vt_road.size()) {
 		vt_road = vt_road_temp;
 	}
