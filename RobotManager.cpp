@@ -27,16 +27,8 @@ void RobotManager::GiveTask(Robot * robots, int * goalTable, vector<vector<vecto
 			robots[i].SetWait(0); //µÈ´ý¸´Î»
 			vector<int> vt_task = { goalTable[i] };
 			robots[i].SetTask(vt_task);
-			if (goalTable[i] < id) {
-				vector<pair<float, float> > vtt(Road[goalTable[i] + 4][id]);
-				reverse(vtt.begin(), vtt.end());
-				vector<vector<pair<float, float> > > st_road ({ vtt });
-				robots[i].SetRoad(st_road);
-			}
-			else if (goalTable[i] > id) {
-				vector<vector<pair<float, float> > > st_road({ Road[id + 4][goalTable[i]] });
-				robots[i].SetRoad(st_road);
-			}
+			vector<vector<pair<float, float> > > st_road({ Road[id + 4][goalTable[i]] });
+			robots[i].SetRoad(st_road);
 		}
 		else {
 			robots[i].SetWait(robots[i].GetBuyorSell());

@@ -71,13 +71,9 @@ float IO::G_Calculate(A_Point * ap, pair<float, float> pos) {
 }
 
 float IO::H_Calculate(pair<float,float> end, pair<float, float> pos) {
-	return sqrt(pow(end.first - pos.first, 2) + pow(end.second - pos.second, 2));
+	return abs(end.first - pos.first) + abs(end.second - pos.second);
 }
 
-bool IO::Cut(int & Type_1, int & Type_2) {
-	if (Type_1 < 3 && Type_2 < 3) return true;
-	return false;
-}
 void IO::CanGo(int Map[102][102]) //没有区分买卖前后
 {
 	for (int i = 0; i < 100; i++) {
@@ -104,10 +100,16 @@ void IO::CanGo(int Map[102][102]) //没有区分买卖前后
 				}
 				if (Map[i - 1][j - 1] == 1 || Map[i + 1][j - 1] == 1) { //左边堵住
 					if (Map[i - 1][j - 1] == 1 && Map[i - 1][j + 2] == 0 && Map[i][j + 2] == 0 && Map[i + 2][j - 1] == 0 && Map[i + 2][j] == 0) {
-						this->CanGo_Map[i][j] = 2; //2代表半点
+						if (Map[i + 1][j + 2] == 0 && Map[i + 2][j + 1] == 0) {
+							this->CanGo_Map[i][j] = 1;
+						}
+						else this->CanGo_Map[i][j] = 2; //2代表半点
 					}
 					else if (Map[i + 1][j - 1] == 1 && Map[i + 1][j + 2] == 0 && Map[i][j + 2] == 0 && Map[i - 2][j - 1] == 0 && Map[i - 2][j] == 0) {
-						this->CanGo_Map[i][j] = 2;
+						if (Map[i - 1][j + 2] == 0 && Map[i - 2][j + 1] == 0) {
+							this->CanGo_Map[i][j] = 1;
+						}
+						else this->CanGo_Map[i][j] = 2; //2代表半点
 					}
 					else {
 						this->CanGo_Map[i][j] = 1;
@@ -115,10 +117,16 @@ void IO::CanGo(int Map[102][102]) //没有区分买卖前后
 				}
 				else if (Map[i - 1][j + 1] == 1 || Map[i + 1][j + 1] == 1) { //右边堵住
 					if (Map[i - 1][j + 1] == 1 && Map[i - 1][j - 2] == 0 && Map[i][j - 2] == 0 && Map[i + 2][j + 1] == 0 && Map[i + 2][j] == 0) {
-						this->CanGo_Map[i][j] = 2; //2代表半点
+						if (Map[i + 1][j - 2] == 0 && Map[i + 2][j - 1] == 0) {
+							this->CanGo_Map[i][j] = 1;
+						}
+						else this->CanGo_Map[i][j] = 2; //2代表半点
 					}
 					else if (Map[i + 1][j + 1] == 1 && Map[i + 1][j - 2] == 0 && Map[i][j - 2] == 0 && Map[i - 2][j + 1] == 0 && Map[i - 2][j] == 0) {
-						this->CanGo_Map[i][j] = 2;
+						if (Map[i - 1][j - 2] == 0 && Map[i - 2][j - 1] == 0) {
+							this->CanGo_Map[i][j] = 1;
+						}
+						else this->CanGo_Map[i][j] = 2; //2代表半点
 					}
 					else {
 						this->CanGo_Map[i][j] = 1;
@@ -135,7 +143,345 @@ void IO::CanGo(int Map[102][102]) //没有区分买卖前后
 	}
 }
 
+void IO::CanGo_NoGoods(int Map[102][102]) //买前
+{
+	vector<pair<int, int> > vt;
+	for (int i = 0; i < 100; i++) {
+		for (int j = 0; j < 100; j++) {
+			int flag = 0;
+			int flag_2 = 0;
+			vt.clear();
+			if (Map[i][j] == 2) { //有工作台在的地方
+				continue;
+			}
+			if (Map[i][j] == 1) { //当前处于障碍物上
+				this->CanGo_Map_NoGoods[i][j] = 1;
+				continue;
+			}
+			for (int x = -1; x < 2; x++) {
+				for (int y = -1; y < 2; y++) {
+					if (i + x < 0 || i + x > 99 || j + y < 0 || j + y > 99) {
+						flag_2++;
+					}
+					else if (Map[i + x][j + y] == 1) {
+						flag++;
+						vt.push_back(make_pair(x, y));
+					}
+				}
+			}
+			if ((flag_2 > 0 && flag > 0) || flag_2 > 1 || flag > 3) {
+				this->CanGo_Map_NoGoods[i][j] = 1;
+				continue;
+			}
+			if (flag_2 > 0 || flag < 2) {
+				if (flag == 1) { //////
+					if (Map[i + 1][j + 1] == 1 || Map[i + 1][j - 1] == 1 || Map[i - 1][j + 1] == 1 || Map[i - 1][j - 1] == 1) {
+						this->CanGo_Map_NoGoods[i][j] = 3;
+					}
+				}
+				continue;
+			}
+			else {
+				if (flag == 2) {
+					if ((vt[0].first == vt[1].first && vt[0].first != 0) || (vt[0].second == vt[1].second && vt[0].second != 0)) {
+						continue;
+					}
+					else {
+						this->CanGo_Map_NoGoods[i][j] = 1;
+						continue;
+					}
+				}
+				if (flag == 3) {
+					if ((vt[0].first == vt[1].first && vt[1].first == vt[2].first) || (vt[0].second == vt[1].second && vt[1].second == vt[2].second)) {
+						continue;
+					}
+					else {
+						this->CanGo_Map_NoGoods[i][j] = 1;
+						continue;
+					}
+				}
+			}
+		}
+	}
+	for (int i = 0; i < 100; i++) { //////
+		for (int j = 0; j < 100; j++) {
+			int flag = 0;
+			if (this->CanGo_Map_NoGoods[i][j] == 3) { //////
+				if (this->CanGo_Map_NoGoods[i + 1][j] == 3 || this->CanGo_Map_NoGoods[i - 1][j] == 3 || this->CanGo_Map_NoGoods[i][j + 1] == 3 || this->CanGo_Map_NoGoods[i][j - 1] == 3) {
+					this->CanGo_Map_NoGoods[i][j] = 0;
+				}
+				else {
+					this->CanGo_Map_NoGoods[i][j] = 1;
+				}
+			}
+			if (this->CanGo_Map_NoGoods[i][j] == 0) {
+				if (i == 0 || i == 99 || j == 0 || j == 99) {
+					continue;
+				}
+				for (int x = -1; x < 2; x++) {
+					for (int y = -1; y < 2; y++) {
+						if (Map[i + x][j + y] != 1) {
+							flag++;
+						}
+					}
+				}
+				if (flag == 9) {
+					if (j + 2 > 99 || Map[i][j + 2] == 1)
+					{
+						this->CanGo_Map_NoGoods[i][j + 1] = 1;
+					}
+					if (j - 2 < 0 || Map[i][j - 2] == 1)
+					{
+						this->CanGo_Map_NoGoods[i][j - 1] = 1;
+					}
+					if (i + 2 > 99 || Map[i + 2][j] == 1)
+					{
+						this->CanGo_Map_NoGoods[i + 1][j] = 1;
+					}
+					if (i - 2 < 0 || Map[i - 2][j] == 1)
+					{
+						this->CanGo_Map_NoGoods[i - 1][j] = 1;
+					}
+				}
+			}
+		}
+	}
+}
+
+int IO::SellorBuy(int type1, int type2) {
+	if (type1 < 3) { //从123出发一定是带着东西
+		return -1;
+	}
+
+	else if (type1 < 6) {
+		if (type2 < 6) {
+			return 1;
+		}
+		else {
+			return -1;
+		}
+	}
+	else if (type1 == 6) {
+		if (type2 < 7) {
+			return 1;
+		}
+		else {
+			return -1;
+		}
+	}
+	else {
+		return 1;
+	}
+}
+
 void IO::A_Star(Robot * robot, WorkTable * table, float n_max, float m_max, int Map[102][102], vector<pair<float, float> > & InitialRobotPos, vector<pair<float, float> > & InitialWorkTablePos, vector<vector<vector<pair<float, float> > > > & Road, map<pair<int,int>,float> & Distance)
+{
+	memset(this->CanGo_Map, 0, sizeof(this->CanGo_Map));
+	memset(this->CanGo_Map_NoGoods, 0, sizeof(this->CanGo_Map_NoGoods));
+	this->CanGo(Map);
+	this->CanGo_NoGoods(Map);
+	int CloseMap[102][102];
+	int OpenMap[102][102];
+	float gap = this->m_gap;
+	pair<float, float> start_pos;
+	pair<float, float> end_pos;
+	for (int i_start = 0; i_start < 4 + InitialWorkTablePos.size(); i_start++) { //前四个为初始机器人位置
+		int num_total = 0;
+		if (i_start >= 4) {
+			pair<float, float> target_now_pos = table[i_start - 4].GetPos();
+			pair<int, int> pos_target = make_pair((49.75 - target_now_pos.second) * 2, (target_now_pos.first - 0.25) * 2);
+			int itt = 0;
+			if (Map[pos_target.first][pos_target.second + 1] == 1) itt++;
+			if (Map[pos_target.first][pos_target.second - 1] == 1) itt++;
+			if (Map[pos_target.first + 1][pos_target.second] == 1) itt++;
+			if (Map[pos_target.first - 1][pos_target.second] == 1) itt++;
+			if (itt > 2) {
+				this->m_NoTable.insert(i_start - 4);
+			}
+			else if(itt == 2) {
+				if ((Map[pos_target.first][pos_target.second + 1] == 1 && Map[pos_target.first][pos_target.second - 1] == 1) || (Map[pos_target.first + 1][pos_target.second] == 1 && Map[pos_target.first - 1][pos_target.second] == 1)) {
+					this->m_NoTable.insert(i_start - 4);
+				}
+				else {
+					if (table[i_start - 4].GetType() > 2) {
+						if (Map[pos_target.first][pos_target.second + 1] == 1 && Map[pos_target.first + 1][pos_target.second] == 1) {
+							if (Map[pos_target.first - 1][pos_target.second + 1] == 1 && Map[pos_target.first + 1][pos_target.second - 1] == 1) {
+								this->m_NoTable.insert(i_start - 4);
+							}
+						}
+						else if (Map[pos_target.first][pos_target.second - 1] == 1 && Map[pos_target.first + 1][pos_target.second] == 1) {
+							if (Map[pos_target.first - 1][pos_target.second - 1] == 1 && Map[pos_target.first + 1][pos_target.second + 1] == 1) {
+								this->m_NoTable.insert(i_start - 4);
+							}
+						}
+						else if (Map[pos_target.first][pos_target.second - 1] == 1 && Map[pos_target.first - 1][pos_target.second] == 1) {
+							if (Map[pos_target.first + 1][pos_target.second - 1] == 1 && Map[pos_target.first - 1][pos_target.second + 1] == 1) {
+								this->m_NoTable.insert(i_start - 4);
+							}
+						}
+						else if (Map[pos_target.first][pos_target.second + 1] == 1 && Map[pos_target.first - 1][pos_target.second] == 1) {
+							if (Map[pos_target.first + 1][pos_target.second + 1] == 1 && Map[pos_target.first - 1][pos_target.second - 1] == 1) {
+								this->m_NoTable.insert(i_start - 4);
+							}
+						}
+					}
+				}
+			}
+		}
+		if (this->m_NoTable.count(i_start - 4)) continue;
+		for (int i_end = 0; i_end < InitialWorkTablePos.size(); i_end++) {
+			int Type_1 = 0;
+			int Type_2 = 0;
+			bool Flag;
+			if (i_start < 4) {
+				start_pos = InitialRobotPos[i_start];
+				if (table[i_end].GetType() > 2) continue;
+			}
+			else {		
+				start_pos = InitialWorkTablePos[i_start - 4];
+				//if (i_start >= i_end + 4) continue;
+				Type_1 = table[i_start - 4].GetType();
+				Type_2 = table[i_end].GetType();
+				if ((Type_1 < 3 && Type_2 < 3) || (i_start == i_end + 4)) {
+
+					if (i_start == i_end + 4) { //自己到自己
+						Road[i_start][i_end].push_back(table[i_end].GetPos());
+					}
+					continue;
+				}
+			}
+			end_pos = InitialWorkTablePos[i_end];
+			this->open.clear();
+			this->close.clear();
+			memset(CloseMap, 0, sizeof(CloseMap));
+			memset(OpenMap, 0, sizeof(OpenMap));
+			A_Point start(start_pos);
+			A_Point * ap;
+			this->open.push_back(&start);
+			OpenMap[int(round((49.75 - start_pos.second) * 2))][int(round((start_pos.first - 0.25) * 2))] = 1;
+			if (i_start < 4) {
+				Flag = true; //买东西
+			}
+			else if (this->SellorBuy(Type_1, Type_2) > 0) {
+				Flag = true;
+			}
+			else {
+				Flag = false;
+			}
+			while (this->InListFlag(this->open, end_pos) < 0) {
+				if (this->open.size() == 0) break;
+				float temp = 100000000;
+				int iter;
+				for (int i = 0; i < this->open.size(); i++) {
+					if (this->open[i]->f < temp) {
+						temp = open[i]->f;
+						iter = i;
+					}
+				}
+				ap = this->open[iter];
+				this->open.erase(open.begin() + iter);
+				this->close.push_back(ap);
+				CloseMap[int(round((49.75 - ap->pos.second) * 2))][int(round((ap->pos.first - 0.25) * 2))] = 1;
+				for (int i = -1; i < 2; i++) {
+					for (int j = -1; j < 2; j++) {
+						float x = ap->pos.first + i * gap;
+						float y = ap->pos.second + j * gap;
+						if (x > 0.24 && x < n_max - 0.24 && y > 0.24 && y < m_max - 0.24) {
+							pair<float, float> now_pos = make_pair(x, y);
+
+							if (((!Flag && this->CanGo_Map[int(round((49.75 - y) * 2))][int(round((x - 0.25) * 2))] != 1) || (Flag && this->CanGo_Map_NoGoods[int(round((49.75 - y) * 2))][int(round((x - 0.25) * 2))] != 1)) && CloseMap[int(round((49.75 - y) * 2))][int(round((x - 0.25) * 2))] != 1) {
+								float temp_g = this->G_Calculate(ap, now_pos);
+								if (OpenMap[int(round((49.75 - y) * 2))][int(round((x - 0.25) * 2))] == 1) {
+									int flag = this->InListFlag(this->open, now_pos);
+									if (temp_g < this->open[flag]->g) {
+										this->open[flag]->g = temp_g;
+										this->open[flag]->father = ap;
+										this->open[flag]->f = this->open[flag]->g + this->open[flag]->h;
+									}
+								}
+								else {
+									A_Point * temp_A_Point = new A_Point(now_pos);
+									temp_A_Point->g = temp_g;
+									temp_A_Point->h = this->H_Calculate(end_pos, now_pos);
+									temp_A_Point->f = temp_g + temp_A_Point->h;
+									temp_A_Point->father = ap;
+									this->open.push_back(temp_A_Point);
+									OpenMap[int(round((49.75 - y) * 2))][int(round((x - 0.25) * 2))] = 1;
+								}
+							}
+						}
+					}
+				}
+			}
+			Road[i_start][i_end].clear();
+			if (this->open.size() != 0) {
+				int end_iter = this->InListFlag(this->open, end_pos);
+				A_Point * temp_iter = this->open[end_iter];
+				Distance[make_pair(i_start, i_end)] = temp_iter->g;
+				while (temp_iter->pos != start.pos) {
+					Road[i_start][i_end].push_back(temp_iter->pos);
+					temp_iter = temp_iter->father;
+				}
+				Road[i_start][i_end].push_back(temp_iter->pos);
+				reverse(Road[i_start][i_end].begin(), Road[i_start][i_end].end());
+
+				if (Flag) { //买东西时用
+					int it = 0;
+					bool target_flag = false;
+					int num = Road[i_start][i_end].size();
+					pair<int, int> pre_target = make_pair((49.75 - Road[i_start][i_end][num - 2].second) * 2, (Road[i_start][i_end][num - 2].first - 0.25) * 2);
+					pair<int, int> end_target = make_pair((49.75 - Road[i_start][i_end][num - 1].second) * 2, (Road[i_start][i_end][num - 1].first - 0.25) * 2);
+					pair<int, int> goal_target;
+					if (this->CanGo_Map[pre_target.first][pre_target.second] == 1) {
+						for (int k = -1; k < 2; k++) {
+							for (int q = -1; q < 2; q++) {
+								if (!(k == 0 && q == 0) && end_target.first + k >= 0 && end_target.first + k < 100 && end_target.second + q >= 0 && end_target.second + q < 100 && this->CanGo_Map[end_target.first + k][end_target.second + q] != 1) {
+									goal_target = make_pair(end_target.first + k, end_target.second + q);
+									target_flag = true;
+									break;
+								}
+							}
+							if (target_flag) break;
+						}
+						if (target_flag) { //能去但是会卡住
+							int gg = 0;
+							Road[i_start][i_end].push_back(make_pair(0.25 + 0.5 * goal_target.second, 49.75 - 0.5 * goal_target.first));
+
+							for (int k = -1; k < 2; k++) {
+								for (int q = -1; q < 2; q++) {
+									if (!(k == 0 && q == 0) && goal_target.first + k >= 0 && goal_target.first + k < 100 && goal_target.second + q >= 0 && goal_target.second + q < 100 && this->CanGo_Map[goal_target.first + k][goal_target.second + q] != 1) {
+										Road[i_start][i_end].push_back(make_pair(0.25 + 0.5 * (goal_target.second + q), 49.75 - 0.5 * (goal_target.first + k)));
+										gg = 1;
+										break;
+									}
+								}
+								if (gg == 1)break;
+							}
+							Road[i_start][i_end].push_back(make_pair(0.25 + 0.5 * end_target.second, 49.75 - 0.5 * end_target.first));
+						}
+						else { //该工作台不能去
+							this->m_NoTable.insert(i_end);
+						}
+					}
+
+				}
+
+				num_total++;
+			}
+
+		}
+		if (num_total == 0) {
+			if (i_start < 4) {
+				this->m_NoRobot.insert(i_start);
+			}
+			else {
+				this->m_NoTable.insert(i_start - 4);
+			}
+		}
+	}
+}
+
+void IO::A_Star_4D(Robot * robot, WorkTable * table, float n_max, float m_max, int Map[102][102], vector<pair<float, float> > & InitialRobotPos, vector<pair<float, float> > & InitialWorkTablePos, vector<vector<vector<pair<float, float> > > > & Road, map<pair<int, int>, float> & Distance)
 {
 	memset(this->CanGo_Map, 0, sizeof(this->CanGo_Map));
 	this->CanGo(Map);
@@ -155,7 +501,7 @@ void IO::A_Star(Robot * robot, WorkTable * table, float n_max, float m_max, int 
 				if (i_start >= i_end + 4) continue;
 				int Type_1 = table[i_start - 4].GetType();
 				int Type_2 = table[i_end].GetType();
-				if (this->Cut(Type_1, Type_2)) continue;
+				if (Type_1 < 3 && Type_2 < 3) continue;
 			}
 			end_pos = InitialWorkTablePos[i_end];
 			this->open.clear();
@@ -184,7 +530,7 @@ void IO::A_Star(Robot * robot, WorkTable * table, float n_max, float m_max, int 
 					for (int j = -1; j < 2; j++) {
 						float x = ap->pos.first + i * gap;
 						float y = ap->pos.second + j * gap;
-						if (x > 0.24 && x < n_max - 0.24 && y > 0.24 && y < m_max - 0.24) {
+						if (x > 0.24 && x < n_max - 0.24 && y > 0.24 && y < m_max - 0.24 && (i == 0 || j == 0)) {
 							pair<float, float> now_pos = make_pair(x, y);
 							if (this->CanGo_Map[int(round((49.75 - y) * 2))][int(round((x - 0.25) * 2))] != 1 && CloseMap[int(round((49.75 - y) * 2))][int(round((x - 0.25) * 2))] != 1) {
 								float temp_g = this->G_Calculate(ap, now_pos);
@@ -253,6 +599,7 @@ void IO::Initialization(RobotManager & rm, Robot * robot,WorkTable * table, vect
 			}
 			else if (line[i] >= '1' && line[i] <= '9') {
 				if (line[i] == '7') rm.SetSevenFlag(true); //有7号
+				//rm.SetSevenFlag(false);
 				InitialWorkTablePos.push_back(make_pair(0.25 + 0.5*i, 49.75 - 0.5*iter));
 				WorkTableType.push_back(line[i] - '1');
 				this->TableIDByType(line[i], iter_table, tableID_by_type);
@@ -272,17 +619,17 @@ void IO::Initialization(RobotManager & rm, Robot * robot,WorkTable * table, vect
 	}
 	this->A_Star(robot, table, 50, 50, Map, InitialRobotPos, InitialWorkTablePos, Road, Distance);
 	//机器人间距离计算
+	
 	for (int i = 0; i < 4 + InitialWorkTablePos.size(); i++)
 	{
 		for (int j = 0; j < InitialWorkTablePos.size(); j++)
 		{
-			if (Distance.count(make_pair(i, j))) {
+			if (Distance.count(make_pair(i, j)) && this->m_NoTable.count(j) == 0) {
 				if (i < 4) { //机器人和工作台的距离
 					DistanceOrder_robot[i].insert(make_pair(Distance[make_pair(i, j)], make_pair(j, WorkTableType[j])));
 				}
-				else {
+				else if (i - 4 != j) {
 					DistanceOrder[i - 4].insert(make_pair(Distance[make_pair(i, j)], make_pair(j, WorkTableType[j])));
-					DistanceOrder[j].insert(make_pair(Distance[make_pair(i, j)], make_pair(i - 4, WorkTableType[i - 4])));
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <map>
+#include <set>
 #include "Robot.h"
 #include "WorkTable.h"
 #include "RobotManager.h"
@@ -27,12 +28,18 @@ class IO
 
 public:
 	int CanGo_Map[102][102];
+	int CanGo_Map_NoGoods[102][102];
+	set<int> m_NoTable;
+	set<int> m_NoRobot;
 	int InListFlag(vector<A_Point*>& lt, pair<float, float> pos);
 	float G_Calculate(A_Point * ap, pair<float, float> pos);
 	float H_Calculate(pair <float, float> end, pair<float, float> pos);
-	bool Cut(int & Type_1, int & Type_2);
 	void CanGo(int Map[102][102]);
+	void CanGo_NoGoods(int Map[102][102]);
+	int SellorBuy(int type1, int type2);
 	void A_Star(Robot * robot, WorkTable * table, float n_max, float m_max, int Map[102][102], vector<pair<float, float> > & InitialRobotPos, vector<pair<float, float> > & InitialWorkTablePos, vector<vector<vector<pair<float, float> > > > & Road, map<pair<int, int>, float> & Distance);
+
+	void A_Star_4D(Robot * robot, WorkTable * table, float n_max, float m_max, int Map[102][102], vector<pair<float, float>>& InitialRobotPos, vector<pair<float, float>>& InitialWorkTablePos, vector<vector<vector<pair<float, float>>>>& Road, map<pair<int, int>, float>& Distance);
 
 	void Initialization(RobotManager & rm, Robot * robot, WorkTable * table, vector<vector<int>>& tableID_by_type, int & WorkTableNum, vector<vector<vector<pair<float, float> > > > & Road, set<pair<float, pair<int, int> > > * DistanceOrder, set<pair<float, pair<int, int> > > * DistanceOrder_robot);
 	

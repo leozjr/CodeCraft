@@ -2,6 +2,7 @@
 #include "IO.h"
 #include <vector>
 #include <cmath>
+#include <cstring>
 #include <algorithm>
 using namespace std;
 

@@ -440,7 +440,7 @@ pair<float, float> MotionControl::CalTrackRoadV(Robot& r, pair<float, float> tar
 	return make_pair(linear_v, angle_v);
 }
 
-//保持间距, 反向时不应该起作用
+//保持间距
 void MotionControl::KeepDistance(int my_id, Robot* others)
 {
 	Robot& r = others[my_id];
@@ -465,10 +465,6 @@ void MotionControl::KeepDistance(int my_id, Robot* others)
 			//别人是否落入呢？
 			if (i != my_id)
 			{
-				//反向检查，如果该人与我反向，那么下面的判断大概率两人都停，所以不做停止操作
-				if (AngleDiff(r.GetDir(), others[i].GetDir()) > 2 * M_PI / 3)
-					return;
-
 				pair<float, float> other_pos = others[i].GetPos(); //当前坐标
 				if ((p_next.first - p.first) == 0)
 				{
@@ -671,28 +667,24 @@ float MotionControl::AngleDiff(std::pair<float, float> relative_pos, std::pair<f
 
 	return min_angle_diff;
 }
-//给出方向，计算角度差
-float MotionControl::AngleDiff(float dir1, float dir2)
-{
-	float angle_diff = abs(dir1 - dir2);
-	float angle_diff_sup = abs(2 * M_PI - angle_diff);
-	float min_angle_diff = (angle_diff_sup >= angle_diff) ? angle_diff : angle_diff_sup;
-	return min_angle_diff;
-}
+
 
 
 float MotionControl::AnglePDcontrol(float angle_diff)
 {
-	float f_P = 4; //比例系数
-	if (abs(angle_diff) > this->m_CanGoAngle)
-	{
-		int sign = std::signbit(angle_diff) ? -1 : 1; //正负号
-		return sign * M_PI; 
-	}
-	else
-	{
-		return f_P * angle_diff;
-	}
+
+	float f_P = 6;
+	float f_D = 0.2;
+	//float output = f_P * angle_diff + f_D*(angle_diff - this->m_LastAngleDiff); // PD控制
+	float angle_output = f_P * angle_diff; // 最简单的比例控制
+	
+	//防溢出
+	if (angle_output > M_PI)
+		angle_output = M_PI;
+	else if (angle_output < -M_PI)
+		angle_output = -M_PI;
+
+	return angle_output;
 }
 
 bool MotionControl::LagCheck(Robot& r, Robot* others)
@@ -715,7 +707,7 @@ bool MotionControl::LagCheck(Robot& r, Robot* others)
 float MotionControl::LinearPDcontrol(Robot& r, float angle)
 {
 	float lv;
-	if (angle < this->m_CanGoAngle)
+	if (angle < 3/M_PI)
 	{
 		if (!r.GetEarlyBrake())
 			lv = r.GetMaxSpeed();
@@ -736,23 +728,21 @@ void MotionControl::MakeOrder(Robot* robots, vector<pair<string, pair<int, float
 	for (int i = 0; i < this->m_RobotsNum; i++)
 	{
 		if (robots[i].GetTask().empty()) continue;
-		
-		if (!LagCheck(robots[i], robots)) 
+
+		if (robots[i].NeedStop())//只要前面有人用了robot.stop，不管是什么情况下用的，都会停
+			Order_1.push_back(make_pair("forward", make_pair(i, 0)));
+		else
+			Order_1.push_back(make_pair("forward", make_pair(i, robots[i].GetNextV().first)));
+
+		if (!LagCheck(robots[i], robots))
 		{
-			//不卡的情况，正常形式
 			Order_1.push_back(make_pair("rotate", make_pair(i, robots[i].GetNextV().second)));
-			
-			if (robots[i].NeedStop())//只要前面有人用了robot.stop，不管是什么情况下用的，都会停
-				Order_1.push_back(make_pair("forward", make_pair(i, 0)));
-			else
-				Order_1.push_back(make_pair("forward", make_pair(i, robots[i].GetNextV().first)));
 		}
 		else
 		{
 			srand(time(NULL)); // 设置随机数种子，以当前时间作为种子
 			float r = rand() * 3.0 / RAND_MAX;
 			Order_1.push_back(make_pair("rotate", make_pair(i, r)));
-			Order_1.push_back(make_pair("forward", make_pair(i, -2)));
 		}
 
 		if (robots[i].GetBuyorSell() == -1)
