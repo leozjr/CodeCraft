@@ -140,6 +140,7 @@ void MotionControl::WhoNeedAvoidance(Robot* robots)
 
 			if (!((robots[i].GetAvoidance() && robots[j].GetAvoidance()) || (robots[i].GetAvoidance() && robots[i].GetAvoidID() == j) || (robots[j].GetAvoidance() && robots[j].GetAvoidID() == i)))
 			{
+
 				//检查避让者的parkroad
 				if (robots[i].GetAvoidance() && !robots[i].m_ParkFutureRoad.empty())
 				{
@@ -161,6 +162,14 @@ void MotionControl::WhoNeedAvoidance(Robot* robots)
 					}
 
 				}
+				else if (robots[i].GetAvoidance() && !robots[i].m_PastRoad.empty())
+				{
+					if (this->cc->Congestion(robots[i].m_PastRoad, i, robots[j].m_FutureRoad[0], j, 1))
+					{
+						//j和i的ParkFutureRoad冲突
+						robots[j].SetAvoidance(true, i);
+					}
+				}
 				else if (robots[j].GetAvoidance() && !robots[j].m_ParkFutureRoad.empty())
 				{
 					//j避让，j走park_future_road
@@ -181,9 +190,15 @@ void MotionControl::WhoNeedAvoidance(Robot* robots)
 					}
 
 				}
-
-				bool temp = this->cc->Congestion(robots[i].m_FutureRoad[0], i, robots[j].m_FutureRoad[0], j, 1);
-				if (temp)
+				else if (robots[j].GetAvoidance() && !robots[j].m_PastRoad.empty())
+				{
+					if (this->cc->Congestion(robots[j].m_PastRoad, j, robots[i].m_FutureRoad[0], i, 1))
+					{
+						//j和i的ParkFutureRoad冲突
+						robots[i].SetAvoidance(true, j);
+					}
+				}
+				else if (this->cc->Congestion(robots[i].m_FutureRoad[0], i, robots[j].m_FutureRoad[0], j, 1))
 				{
 					
 					this->cc->path1 = robots[i].m_FutureRoad[0];
@@ -230,7 +245,13 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 {
 	Robot& r = robots[my_id];
 	Robot& r_first_go = robots[first_go_id];
-	
+	vector<pair<float, float>> avoider_pos;
+	for (int i = 0; i < this->m_RobotsNum; i++)
+	{
+		if (robots[i].GetAvoidance() && my_id != i)
+			avoider_pos.push_back(robots[i].GetPos());
+	}
+
 	//看一下别人的路，为了避免站到别人路上
 	vector<vector<pair<float, float>>> others_road;
 	vector<pair<float, float>> part_of_future_road;
@@ -253,39 +274,68 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 			}
 			else
 			{
-				int num = min(int(robots[i].m_FutureRoad[0].size()), 10);
+				int num = min(int(robots[i].m_FutureRoad[0].size()), 15);
 				part_of_future_road.assign(robots[i].m_FutureRoad[0].end()-num, robots[i].m_FutureRoad[0].end());
 				others_road.push_back(part_of_future_road);
 			}
 		}
 	}
 
-	if (!r.CanPark())
+	if (!r.CanPark() && !r.EndPark)
 	{	
 		//往后开始循迹
 		r.SetNextV(this->CalTrackRoadV(r, r.m_PastRoad.back()));
 
+		this->cc->m_LeaveCongestionPoint[r_first_go.GetID()] = r.m_FutureRoad[0].back(); //还没搜到时，默认的leave_point是Future_road的第一个
 		if (TargetDistance(r.GetPos(), r.m_PastRoad.back()) < this->m_TrackDistance)
 		{
 			r.m_FutureRoad[0].push_back(r.m_PastRoad.back());
 			r.m_PastRoad.pop_back();
 
 			//同时搜索可以停靠的点
-			r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), r_first_go.m_FutureRoad[0], r.GetPos(), r_first_go.GetPos(), others_road);
+			if (r_first_go.GetAvoidance())
+			{
+				if (!r_first_go.m_ParkFutureRoad.empty())
+				{
+					r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), r_first_go.m_ParkFutureRoad, r.GetPos(), r_first_go.GetPos(), others_road, avoider_pos);
+				}
+				else if (!r_first_go.m_ParkPastRoad.empty())
+				{
+					r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), r_first_go.m_ParkPastRoad, r.GetPos(), r_first_go.GetPos(), others_road, avoider_pos);
+				}
+				else
+				{
+					int num = min(int(r_first_go.m_PastRoad.size()), 150);
+					part_of_future_road.assign(r_first_go.m_PastRoad.end() - num, r_first_go.m_PastRoad.end());
+					r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), part_of_future_road, r.GetPos(), r_first_go.GetPos(), others_road, avoider_pos);
+				}
+			}
+			else //如果避让的人是正常人
+			{
+				r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), r_first_go.m_FutureRoad[0], r.GetPos(), r_first_go.GetPos(), others_road, avoider_pos);
+			}
+			
 			if (!r.m_ParkFutureRoad.empty())
 			{
-				this->cc->m_LeaveCongestionPoint[r_first_go.GetID()] = r.m_PastRoad.back();
+				if (r.m_ParkFutureRoad.size() > 1)
+					this->cc->m_LeaveCongestionPoint[r_first_go.GetID()] = *(r.m_ParkFutureRoad.begin() + 1);
+				else
+					this->cc->m_LeaveCongestionPoint[r_first_go.GetID()] = *(r.m_ParkFutureRoad.begin());
 				//泊车标志位为真，之后不再搜索路线
 				r.SetCanPark(true);
 			}
 		}
-	}
 
-	if (r.CanPark() && !r.EndPark)
-	{	//开始循到泊车点，在泊车点等待
-		if (cc->CanGo(r_first_go.GetPos(), r_first_go.GetID()))
-			r.EndPark = true;
-		else if (r.m_ParkFutureRoad.size() > 1)
+		if (cc->CanGo(r.CanPark(), r_first_go))
+			r.EndPark = true; //可以走了，直接结束泊车，直接走
+	}
+	else if (r.CanPark() && !r.EndPark)
+	{	
+		if (cc->CanGo(r.CanPark(), r_first_go))
+			r.EndPark = true; //可以走了，直接结束泊车，直接走
+
+		//开始循到泊车点，在泊车点等待
+		if (r.m_ParkFutureRoad.size() > 1)
 		{
 			//循迹
 			r.SetNextV(this->CalTrackRoadV(r, r.m_ParkFutureRoad.back()));
@@ -305,6 +355,8 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 	
 	if (r.EndPark)
 	{
+		// 直接回去的三种情况，在park_future_road上，在park_past_road上，连路都没搜到的情况
+
 		if (!r.m_ParkFutureRoad.empty())
 		{
 			//还是会先走完parkFutureRoad，然后
@@ -314,7 +366,7 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 				r.m_ParkPastRoad.push_back(r.m_ParkFutureRoad.back());
 				r.m_ParkFutureRoad.pop_back();
 			}
-		}
+		} 
 		else if(r.m_ParkPastRoad.size() > 1)
 		{
 			r.SetNextV(this->CalTrackRoadV(r, r.m_ParkPastRoad.back()));
@@ -328,9 +380,9 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 			if (TargetDistance(r.GetPos(), r.m_ParkPastRoad.back()) < 0.5)
 				r.m_ParkPastRoad.pop_back();
 		}
-		else
-		{
-			//避让状态解除
+		else if(!r.CanPark() || (r.CanPark() && r.m_ParkFutureRoad.empty() && r.m_ParkPastRoad.empty()))
+		{ 
+			//路都没找到，就可以直接走了，那么也允许解除，或者找到路了，走完全程后，予以解除
 			r.SetAvoidance(false, -1);
 			r.SetCanPark(false);
 			r.EndPark = false;
@@ -440,13 +492,14 @@ pair<float, float> MotionControl::CalTrackRoadV(Robot& r, pair<float, float> tar
 	return make_pair(linear_v, angle_v);
 }
 
-//保持间距
+//保持间距, 反向时不应该起作用
 void MotionControl::KeepDistance(int my_id, Robot* others)
 {
 	Robot& r = others[my_id];
 	float default_range = 2; //当x或y坐标相同时，默认探测范围
-	int p_gap = 1; //间隔几个点检查，间隔越大，探测到的范围最大
-	int N = min(2, int(r.m_FutureRoad[0].size()-p_gap));; //6个点的future_road探测空间，或者future_road长度不够6时，取size-1
+	int p_gap = 2; //间隔几个点检查，间隔越大，探测到的范围最大
+	int p_range = 3; //检查几个点开外的人，越大越远
+	int N = min(p_range, int(r.m_FutureRoad[0].size()-p_gap));; //6个点的future_road探测空间，或者future_road长度不够6时，取size-1
 
 	if (N < 1)
 		return;
@@ -465,6 +518,10 @@ void MotionControl::KeepDistance(int my_id, Robot* others)
 			//别人是否落入呢？
 			if (i != my_id)
 			{
+				//反向检查，如果该人与我反向，那么下面的判断大概率两人都停，所以不做停止操作
+				if (AngleDiff(r.GetDir(), others[i].GetDir()) > 2 * M_PI / 3)
+					return;
+
 				pair<float, float> other_pos = others[i].GetPos(); //当前坐标
 				if ((p_next.first - p.first) == 0)
 				{
@@ -506,7 +563,7 @@ void MotionControl::KeepDistance(int my_id, Robot* others)
 void MotionControl::JumpPointSolver(Robot& r)
 {
 	//在前N个点中取最近的一个
-	int n = min(6, int(r.m_FutureRoad[0].size()));
+	int n = min(5, int(r.m_FutureRoad[0].size()));
 	if (n == 0)
 		return;
 
@@ -574,6 +631,7 @@ void MotionControl::TrackRoad(Robot& r)
 		{
 			//正常循迹
 			vector<vector<pair<float, float>>> others_road; //用了AvoidanceRoad搜空间，但这里没必要再考虑和其他路重合，先给个空的吧
+			vector<pair<float, float>> avoider_pos;
 			//偏离路径后，跳点的检查及解决
 			if (future_road.back() == future_road.front())
 				r.AllowJump = false; //到最后时刻，可能出现需要到达再返回的情况
@@ -595,7 +653,7 @@ void MotionControl::TrackRoad(Robot& r)
 						r.SetPriorityPass(false);
 						r.EndPriorityNumber = 0;
 					}
-					else if (!this->cc->AvoidanceRoad(r.m_FutureRoad[0].back(), part_past_road, r.GetPos(), make_pair(100, 100), others_road).empty())
+					else if (!this->cc->AvoidanceRoad(r.m_FutureRoad[0].back(), part_past_road, r.GetPos(), make_pair(100, 100), others_road, avoider_pos).empty())
 					{
 						r.EndPriorityNumber += 1;
 					}
@@ -667,29 +725,33 @@ float MotionControl::AngleDiff(std::pair<float, float> relative_pos, std::pair<f
 
 	return min_angle_diff;
 }
-
+//给出方向，计算角度差
+float MotionControl::AngleDiff(float dir1, float dir2)
+{
+	float angle_diff = abs(dir1 - dir2);
+	float angle_diff_sup = abs(2 * M_PI - angle_diff);
+	float min_angle_diff = (angle_diff_sup >= angle_diff) ? angle_diff : angle_diff_sup;
+	return min_angle_diff;
+}
 
 
 float MotionControl::AnglePDcontrol(float angle_diff)
 {
-
-	float f_P = 6;
-	float f_D = 0.2;
-	//float output = f_P * angle_diff + f_D*(angle_diff - this->m_LastAngleDiff); // PD控制
-	float angle_output = f_P * angle_diff; // 最简单的比例控制
-	
-	//防溢出
-	if (angle_output > M_PI)
-		angle_output = M_PI;
-	else if (angle_output < -M_PI)
-		angle_output = -M_PI;
-
-	return angle_output;
+	float f_P = 4; //比例系数
+	if (abs(angle_diff) > this->m_CanGoAngle)
+	{
+		int sign = std::signbit(angle_diff) ? -1 : 1; //正负号
+		return sign * M_PI; 
+	}
+	else
+	{
+		return f_P * angle_diff;
+	}
 }
 
 bool MotionControl::LagCheck(Robot& r, Robot* others)
 {
-	float lag_speed = 0.2;
+	float lag_speed = 0.1;
 	for (int i = 0; i < this->m_RobotsNum; i++)
 	{
 		if (i != r.GetID())
@@ -707,7 +769,7 @@ bool MotionControl::LagCheck(Robot& r, Robot* others)
 float MotionControl::LinearPDcontrol(Robot& r, float angle)
 {
 	float lv;
-	if (angle < 3/M_PI)
+	if (angle < this->m_CanGoAngle)
 	{
 		if (!r.GetEarlyBrake())
 			lv = r.GetMaxSpeed();
@@ -728,21 +790,23 @@ void MotionControl::MakeOrder(Robot* robots, vector<pair<string, pair<int, float
 	for (int i = 0; i < this->m_RobotsNum; i++)
 	{
 		if (robots[i].GetTask().empty()) continue;
-
-		if (robots[i].NeedStop())//只要前面有人用了robot.stop，不管是什么情况下用的，都会停
-			Order_1.push_back(make_pair("forward", make_pair(i, 0)));
-		else
-			Order_1.push_back(make_pair("forward", make_pair(i, robots[i].GetNextV().first)));
-
-		if (!LagCheck(robots[i], robots))
+		
+		if (!LagCheck(robots[i], robots)) 
 		{
+			//不卡的情况，正常形式
 			Order_1.push_back(make_pair("rotate", make_pair(i, robots[i].GetNextV().second)));
+			
+			if (robots[i].NeedStop())//只要前面有人用了robot.stop，不管是什么情况下用的，都会停
+				Order_1.push_back(make_pair("forward", make_pair(i, 0)));
+			else
+				Order_1.push_back(make_pair("forward", make_pair(i, robots[i].GetNextV().first)));
 		}
 		else
 		{
 			srand(time(NULL)); // 设置随机数种子，以当前时间作为种子
 			float r = rand() * 3.0 / RAND_MAX;
 			Order_1.push_back(make_pair("rotate", make_pair(i, r)));
+			Order_1.push_back(make_pair("forward", make_pair(i, -2)));
 		}
 
 		if (robots[i].GetBuyorSell() == -1)

@@ -61,6 +61,7 @@ public:
 	
 	std::pair<float, float> EndPriorityPass; //结束优先通行权标志
 	int EndPriorityNumber; //经过两个搜到的地方，就结束优先通行
+	int FullyCanGo; //完全可以通行的标志位，别人需要进Leave_Point点范围，然后再出点范围，才能走
 	
 
 	/*-------查询函数------*/
