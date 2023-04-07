@@ -6,6 +6,9 @@
 #include"IO.h"
 #include"Robot.h"
 #include"CongestionControl.h"
+#define _USE_MATH_DEFINES
+#include<math.h>
+
 class MotionControl
 {
 	int m_RobotsNum = 4;
@@ -15,7 +18,8 @@ class MotionControl
 	float m_CollisionTurnPower = 3; //避障转向力度。最大M_PI
 	bool m_TurnRight; //避障向左还是向右
 
-	float m_TrackDistance = 1;
+	float m_CanGoAngle = M_PI/6; //允许前进的角度偏离值，即如果与当前target角度大于这个角，会速度减为0转弯，直到小于该角度才会出发
+	float m_TrackDistance = 1; //循迹pop距离，1
 
 	CongestionControl* cc;
 	void WhoNeedAvoidance(Robot* robots);
@@ -39,10 +43,12 @@ class MotionControl
 	void CrossChasmSolver(Robot& r); //解决机器人穿越卡口时的卡顿问题
 	int NearChasm(Robot& r);
 
-	//计算航向差
+	//计算角度差
 	float AngleDiff(std::pair<float, float> target_pos, std::pair<float, float> robot_pos, float robot_dir);
-	//角度差通用版本
+	//给出向量坐标计算角度差
 	float AngleDiff(std::pair<float, float> relative_pos, std::pair<float, float> relative_v);
+	//给出方向，计算角度差
+	float AngleDiff(float dir1, float dir2);
 	
 	bool LagCheck(Robot& r, Robot* others);
 

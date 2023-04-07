@@ -134,7 +134,7 @@ void Robot::BuySellCheck(int type, WorkTable* wts)
 			this->EarlyBrake(wts[this->m_Task.back()].GetPos(), this->m_Pos);
 
 			this->m_Busy = true;//我忙了,因为我任务表没完成
-			if (this->GetGoods() == 0 && this->Reached() && this->m_FutureRoad.size() == 1) { //没货物，准备去买
+			if (this->GetGoods() == 0 && this->Reached() && this->m_FutureRoad[0].size() == 1) { //没货物，准备去买
 				if (wts[this->m_Task.back()].HaveProduct())
 				{
 					this->Buy();
@@ -142,7 +142,7 @@ void Robot::BuySellCheck(int type, WorkTable* wts)
 					this->m_Busy = false;
 				}
 			}
-			else if (this->GetGoods() > 0 && this->Reached() && this->m_FutureRoad.size() == 1) { //有货物，准备去卖
+			else if (this->GetGoods() > 0 && this->Reached() && this->m_FutureRoad[0].size() == 1) { //有货物，准备去卖
 				this->Sell();
 				//this->m_SuccTrans = true; // 成功交易标志位，给mc判断是否继续前进用的
 				this->m_Busy = false;// task列表此时为空，任务完成，Busy标志解除
