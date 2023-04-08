@@ -138,6 +138,16 @@ void MotionControl::WhoNeedAvoidance(Robot* robots)
 		{
 			if (robots[i].GetTask().empty() || robots[j].GetTask().empty()) continue;
 
+			//避让过程中切换了任务
+			if (robots[i].GetAvoidance() && robots[i].GetAvoidID() == j && !robots[j].isBusy())
+			{
+				robots[j].SetAvoidance(true, i);
+			}
+			else if (robots[j].GetAvoidance() && robots[i].GetAvoidID() == i && !robots[i].isBusy())
+			{
+				robots[i].SetAvoidance(true, j);
+			}
+
 			if (!((robots[i].GetAvoidance() && robots[j].GetAvoidance()) || (robots[i].GetAvoidance() && robots[i].GetAvoidID() == j) || (robots[j].GetAvoidance() && robots[j].GetAvoidID() == i)))
 			{
 
@@ -274,7 +284,7 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 			}
 			else
 			{
-				int num = min(int(robots[i].m_FutureRoad[0].size()), 15);
+				int num = min(int(robots[i].m_FutureRoad[0].size()), 30);
 				part_of_future_road.assign(robots[i].m_FutureRoad[0].end()-num, robots[i].m_FutureRoad[0].end());
 				others_road.push_back(part_of_future_road);
 			}
@@ -297,11 +307,17 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 			{
 				if (!r_first_go.m_ParkFutureRoad.empty())
 				{
-					r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), r_first_go.m_ParkFutureRoad, r.GetPos(), r_first_go.GetPos(), others_road, avoider_pos);
+					vector<pair<float, float>> all_road = r_first_go.m_FutureRoad[0];
+					all_road.insert(all_road.end(), r_first_go.m_ParkPastRoad.begin(), r_first_go.m_ParkPastRoad.end());
+					all_road.insert(all_road.end(), r_first_go.m_ParkFutureRoad.begin(), r_first_go.m_ParkFutureRoad.end());
+					
+					r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), all_road, r.GetPos(), r_first_go.GetPos(), others_road, avoider_pos);
 				}
 				else if (!r_first_go.m_ParkPastRoad.empty())
 				{
-					r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), r_first_go.m_ParkPastRoad, r.GetPos(), r_first_go.GetPos(), others_road, avoider_pos);
+					vector<pair<float, float>> all_road = r_first_go.m_FutureRoad[0];
+					all_road.insert(all_road.end(), r_first_go.m_ParkPastRoad.begin(), r_first_go.m_ParkPastRoad.end());
+					r.m_ParkFutureRoad = this->cc->AvoidanceRoad(r.m_PastRoad.back(), all_road, r.GetPos(), r_first_go.GetPos(), others_road, avoider_pos);
 				}
 				else
 				{
@@ -317,10 +333,7 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 			
 			if (!r.m_ParkFutureRoad.empty())
 			{
-				if (r.m_ParkFutureRoad.size() > 1)
-					this->cc->m_LeaveCongestionPoint[r_first_go.GetID()] = *(r.m_ParkFutureRoad.begin() + 1);
-				else
-					this->cc->m_LeaveCongestionPoint[r_first_go.GetID()] = *(r.m_ParkFutureRoad.begin());
+				this->cc->m_LeaveCongestionPoint[r_first_go.GetID()] = *(r.m_ParkFutureRoad.begin());
 				//泊车标志位为真，之后不再搜索路线
 				r.SetCanPark(true);
 			}
@@ -344,7 +357,6 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 				r.m_ParkPastRoad.push_back(r.m_ParkFutureRoad.back());
 				r.m_ParkFutureRoad.pop_back();
 			}
-				
 		}
 		else if(r.m_ParkFutureRoad.size() == 1)
 		{
@@ -380,7 +392,9 @@ void MotionControl::TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots
 			if (TargetDistance(r.GetPos(), r.m_ParkPastRoad.back()) < 0.5)
 				r.m_ParkPastRoad.pop_back();
 		}
-		else if(!r.CanPark() || (r.CanPark() && r.m_ParkFutureRoad.empty() && r.m_ParkPastRoad.empty()))
+		
+		//当前帧就要直接置位
+		if(!r.CanPark() || (r.CanPark() && r.m_ParkFutureRoad.empty() && r.m_ParkPastRoad.empty()))
 		{ 
 			//路都没找到，就可以直接走了，那么也允许解除，或者找到路了，走完全程后，予以解除
 			r.SetAvoidance(false, -1);
@@ -399,6 +413,9 @@ void MotionControl::Navigation(Robot* robots)
 	for (int i = 0; i < this->m_RobotsNum; i++)
 	{
 		if (robots[i].GetTask().empty()) continue;
+
+		//距离控制
+		this->KeepDistance(i, robots);
 
 		if (robots[i].GetAvoidance())
 		{
@@ -422,8 +439,7 @@ void MotionControl::Navigation(Robot* robots)
 		}*/
 		else
 		{
-			//距离控制
-			this->KeepDistance(i, robots);
+
 			//循迹
 			this->TrackRoad(robots[i]);
 		}
@@ -558,17 +574,44 @@ void MotionControl::KeepDistance(int my_id, Robot* others)
 	Robot& r = others[my_id];
 	float default_range = 2; //当x或y坐标相同时，默认探测范围
 	int p_gap = 2; //间隔几个点检查，间隔越大，探测到的范围最大
-	int p_range = 2; //检查几个点开外的人，越大越远
-	int N = min(p_range, int(r.m_FutureRoad[0].size()-p_gap));; //p_range个点的future_road探测空间，或者future_road长度不够6时，取size-1
+	int p_range = 1; //检查几个点开外的人，越大越远
+	
+	vector<pair<float, float>>* road = NULL; //根据机器人的当前状态选择合适的路
+	if (r.GetAvoidance())
+	{
+		if (r.CanPark())
+		{
+			if (!r.m_ParkFutureRoad.empty())
+			{
+				road = &r.m_ParkFutureRoad;
+			}
+			else if(!r.m_ParkPastRoad.empty())
+			{
+				road = &r.m_ParkPastRoad;
+			}
+		}
+		else
+		{
+			int idx = min(int(r.m_PastRoad.size() - 1), 10); //急停最多五六个都很多了，给10个
+			vector<pair<float, float>> part_past_road;
+			part_past_road.assign(r.m_PastRoad.end() - idx, r.m_PastRoad.end());
+			road = &part_past_road;
+		}
+	}
+	else
+	{
+		road = &r.m_FutureRoad[0];
+	}
+	int N = min(p_range, int(road->size()-p_gap));; //p_range个点的future_road探测空间，或者future_road长度不够6时，取size-1
 
 	if (N < 1)
 		return;
 
 	//遍历N个点，检查是否有人落在这个区间
-	for (auto iter = r.m_FutureRoad[0].end() - N; iter != r.m_FutureRoad[0].end(); ++iter)
+	for (auto iter = road->end() - N; iter != road->end(); ++iter)
 	{
 		pair<float, float> p = *iter; //当前坐标
-		if (iter == r.m_FutureRoad[0].end() - 1)
+		if (iter == road->end() - 1)
 			p = r.GetPos(); //最后一个点的时候，以机器人自己坐标为准
 
 		pair<float, float> p_next = *(iter-p_gap); //前一个坐标
@@ -613,10 +656,6 @@ void MotionControl::KeepDistance(int my_id, Robot* others)
 		}
 		
 	}
-
-
-
-
 }
 
 //机器人跳点解决方法
@@ -641,32 +680,7 @@ void MotionControl::JumpPointSolver(Robot& r)
 		r.m_PastRoad.push_back(r.m_FutureRoad[0].back()); 
 		r.m_FutureRoad[0].pop_back(); 
 	}
-
 }
-
-//靠近卡口检测 -1不是卡口，0是进入，1是出卡口
-int MotionControl::NearChasm(Robot& r)
-{
-
-
-	//pair<int, int> now_pos = make_pair((49.75 - my_pos.second) * 2, (my_pos.first - 0.25) * 2);
-	return false;
-}
-
-//在经过卡口的时候，需要补两个点，并且控制的粒度要变小
-void MotionControl::CrossChasmSolver(Robot& r)
-{
-	if (this->NearChasm(r) == 0)
-	{
-		//刚进卡口，补点，开精准控制
-	}
-	else
-	{
-		//出卡口，关精准控制
-	}
-	
-}
-
 
 //循迹
 void MotionControl::TrackRoad(Robot& r)
@@ -697,8 +711,6 @@ void MotionControl::TrackRoad(Robot& r)
 				r.AllowJump = false; //到最后时刻，可能出现需要到达再返回的情况
 			if(r.AllowJump)
 				this->JumpPointSolver(r);
-
-			//过卡口补点
 
 			r.SetNextV(this->CalTrackRoadV(r, future_road.back()));
 			if (TargetDistance(r.GetPos(), future_road.back()) < this->m_TrackDistance)
@@ -753,13 +765,6 @@ float MotionControl::AngleDiff(pair<float, float> target_pos, pair<float, float>
 	int dir = 1;
 	if (a.first * b.second - b.first * a.second < 0)
 		dir = -1;
-
-	//单位化
-	//float b_length = sqrt(pow(b.first, 2) + pow(b.second, 2));
-	//b.first = b.first / b_length;
-	//b.second = b.second / b.second;
-
-	//float angle = dir *acos((a.first * b.first + a.second * b.second));
 
 	//计算目标向量关于X轴正方向的夹角
 	float target_dir = atan2(target_pos.second-robot_pos.second, target_pos.first-robot_pos.first);
@@ -818,11 +823,28 @@ bool MotionControl::LagCheck(Robot& r, Robot* others)
 		{
 			if (TargetDistance(r.GetPos(), others[i].GetPos()) < 1.1 && (abs(r.GetV().first)+abs(r.GetV().second))< lag_speed && (abs(others[i].GetV().first) + abs(others[i].GetV().second)) < lag_speed)
 			{
-				return true;
+				++this->m_RollBackTime;
 			}
 		}
 	}
-	return false;
+	if (this->m_RollBackTime > 300)
+		return true;
+	else
+		return false;
+}
+
+void MotionControl::LagSolver(Robot& r, Robot* others)
+{
+	for (int i = 0; i < this->m_RobotsNum; i++)
+	{
+		if (r.GetAvoidance() && r.GetAvoidID() == others[i].GetID())
+			continue;
+		if (i != r.GetID() && TargetDistance(r.GetPos(), others[i].GetPos()) < 1.1)
+		{
+			others[i].SetAvoidance(true, r.GetID());
+			this->m_RollBackTime = 0;
+		}
+	}
 }
 
 //速度控制
@@ -863,10 +885,7 @@ void MotionControl::MakeOrder(Robot* robots, vector<pair<string, pair<int, float
 		}
 		else
 		{
-			srand(time(NULL)); // 设置随机数种子，以当前时间作为种子
-			float r = rand() * 3.0 / RAND_MAX;
-			Order_1.push_back(make_pair("rotate", make_pair(i, r)));
-			Order_1.push_back(make_pair("forward", make_pair(i, -2)));
+			LagSolver(robots[i], robots);
 		}
 
 		if (robots[i].GetBuyorSell() == -1)

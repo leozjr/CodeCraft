@@ -21,6 +21,8 @@ class MotionControl
 	float m_CanGoAngle = M_PI/6; //允许前进的角度偏离值，即如果与当前target角度大于这个角，会速度减为0转弯，直到小于该角度才会出发
 	float m_TrackDistance = 1; //循迹pop距离，1
 
+	int m_RollBackTime = 0;
+
 	CongestionControl* cc;
 	void WhoNeedAvoidance(Robot* robots);
 	void TrackAvoidanceBack(int my_id, int first_go_id, Robot* robots);
@@ -41,8 +43,6 @@ class MotionControl
 	std::pair<float, float> NearWallSolver(pair<float, float> target_point); //将靠墙的点挪0.25的距离
 	void KeepDistance(int my_id, Robot* others);
 	void JumpPointSolver(Robot& r); //解决机器人提前出现在未来的点的情况，即跳点求解器
-	void CrossChasmSolver(Robot& r); //解决机器人穿越卡口时的卡顿问题
-	int NearChasm(Robot& r);
 
 	//计算角度差
 	float AngleDiff(std::pair<float, float> target_pos, std::pair<float, float> robot_pos, float robot_dir);
@@ -52,6 +52,7 @@ class MotionControl
 	float AngleDiff(float dir1, float dir2);
 	
 	bool LagCheck(Robot& r, Robot* others);
+	void LagSolver(Robot& r, Robot* others);
 
 	// 输出角速度计算
 	float AnglePDcontrol(float angle_diff);

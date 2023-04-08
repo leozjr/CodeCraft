@@ -20,10 +20,21 @@ bool CongestionControl::CanGo(bool can_park, Robot& r_first_go)
 {
 	pair<float, float> pos = r_first_go.GetPos();
 	int id = r_first_go.GetID();
-	vector<pair<float, float>>& future_road = r_first_go.m_FutureRoad[0];
+	vector<pair<float, float>>* future_road;
+	if (!r_first_go.GetAvoidance())
+	{
+		future_road = &r_first_go.m_FutureRoad[0];
+	}
+	else
+	{
+		int idx = min(int(r_first_go.m_PastRoad.size() - 1), 50);
+		vector<pair<float, float>> part_past_road;
+		part_past_road.assign(r_first_go.m_PastRoad.end() - idx, r_first_go.m_PastRoad.end());
+		future_road = &part_past_road;
+	}
 
 	float dis = this->distance(pos, this->m_LeaveCongestionPoint[id]);
-	for (auto p_itx = future_road.rbegin(); p_itx != future_road.rend();p_itx++)
+	for (auto p_itx = future_road->rbegin(); p_itx != future_road->rend();p_itx++)
 	{
 		//如果future_road中有任何一个点都比我现在的位置离leave_point更近，那么就不能can_go
 		if (this->distance(*p_itx, this->m_LeaveCongestionPoint[id]) < dis)
@@ -66,7 +77,7 @@ void CongestionControl::Road_DFS(std::vector<int> iter_i, std::vector<int> iter_
 			if (distance(your_pos, pos_xy) > 2 && abs(pos.first - this->m_pos.first) < 6 && abs(pos.second - this->m_pos.second) < 6 && pos.first > 0 && pos.first < 100 && pos.second > 0 && pos.second < 100 && !this->m_Flag[pos.first][pos.second] && this->io->CanGo_Map[pos.first][pos.second] != 1) {
 				bool flag_a = false;
 				for (int k = 0; k < avoider_pos.size(); k++) {
-					if (distance(my_pos, avoider_pos[k]) < 2) {
+					if (distance(pos_xy, avoider_pos[k]) < 2) {
 						flag_a = true;
 						break;
 					}
@@ -93,7 +104,7 @@ int CongestionControl::Congestion(std::vector<std::pair<float, float> >& path1, 
 		int max_length = min(10, int(path1.size())); //最多搜索10个点
 		max_length = min(max_length, int(path2.size()));
 		float max_dis = 1.0; //点距阈值
-		for (int i = max_length - 1; i >= 1; i--) {
+		for (int i = max_length - 1; i >= 0; i--) {
 			if (distance(path1[0], path2[i]) < max_dis && distance(path1[i], path2[0]) < max_dis) { //确定首尾是否重合
 				int iter = i - 1;
 				int iter2 = 1;
