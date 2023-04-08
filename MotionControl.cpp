@@ -484,12 +484,72 @@ vector<int> MotionControl::CollisionDetection(Robot& robot)
 //计算循迹速度控制 <线速度，角速度>
 pair<float, float> MotionControl::CalTrackRoadV(Robot& r, pair<float, float> target_point)
 {
+	pair<float, float> final_target_point = target_point;
+	if (target_point != r.m_FutureRoad[0].front())
+		final_target_point = this->NearWallSolver(target_point); // 不是工作台，就执行靠墙挪点
+
 	//这个angle_diff是带正负号的
-	float angle_diff = this->AngleDiff(target_point, r.GetPos(), r.GetDir());
+	float angle_diff = this->AngleDiff(final_target_point, r.GetPos(), r.GetDir());
 
 	float angle_v = this->AnglePDcontrol(angle_diff);
 	float linear_v = this->LinearPDcontrol(r, abs(angle_diff));
 	return make_pair(linear_v, angle_v);
+}
+
+// 靠墙点的挪动函数
+std::pair<float, float> MotionControl::NearWallSolver(pair<float, float> target_point)
+{
+	pair<int, int> map_pos = make_pair((49.75 - target_point.second) * 2, (target_point.first - 0.25) * 2);
+	int x = map_pos.first;
+	int y = map_pos.second;
+	pair<float, float> op_pos;
+	if (x > 0 && x < 99 && y > 0 && y < 99) //防止越界
+	{
+		//首先判断上下左右
+		if (this->cc->io->Map[x - 1][y] == 1)
+		{
+			op_pos = make_pair(0.25 + 0.5 * y, 49.75 - 0.5 * (x + 1));
+			return make_pair((target_point.first + op_pos.first) / 2, (target_point.second + op_pos.second) / 2);
+		}
+		else if (this->cc->io->Map[x + 1][y] == 1)
+		{
+			op_pos = make_pair(0.25 + 0.5 * y, 49.75 - 0.5 * (x - 1));
+			return make_pair((target_point.first + op_pos.first) / 2, (target_point.second + op_pos.second) / 2);
+		}
+		else if (this->cc->io->Map[x][y - 1] == 1)
+		{
+			op_pos = make_pair(0.25 + 0.5 * (y + 1), 49.75 - 0.5 * x);
+			return make_pair((target_point.first + op_pos.first) / 2, (target_point.second + op_pos.second) / 2);
+		}
+		else if (this->cc->io->Map[x][y + 1] == 1)
+		{
+			op_pos = make_pair(0.25 + 0.5 * (y - 1), 49.75 - 0.5 * x);
+			return make_pair((target_point.first + op_pos.first) / 2, (target_point.second + op_pos.second) / 2);
+		}
+		else
+		{
+			//然后判断角格
+			vector<pair<int, int>> pos_vec;
+			for (int ii = -1; ii < 2; ii++) {
+				for (int jj = -1; jj < 2; jj++) {
+					if (ii != 0 && jj != 0 && this->cc->io->Map[x + ii][y + jj] == 1) {
+						pos_vec.push_back(make_pair(x + ii, y + jj));
+					}
+				}
+			}
+			if (pos_vec.size() == 1) {
+
+				op_pos = make_pair(0.25 + 0.5 * (2*y - pos_vec[0].second), 49.75 - 0.5 * (2 * x - pos_vec[0].first));
+				return make_pair((target_point.first + op_pos.first) / 2.0, (target_point.second + op_pos.second) / 2.0);
+			}
+			else if (pos_vec.size() == 2) {
+				pair<int, int> oop_pos = make_pair((pos_vec[0].first + pos_vec[1].first) / 2, (pos_vec[0].second + pos_vec[1].second)/2);
+				op_pos = make_pair(0.25 + 0.5 * (2*y - oop_pos.second), 49.75 - 0.5 * (2*x - oop_pos.first));
+				return make_pair((target_point.first + op_pos.first) / 2.0, (target_point.second + op_pos.second) / 2.0);
+			}
+		}
+	}
+	return target_point;
 }
 
 //保持间距, 反向时不应该起作用
@@ -498,8 +558,8 @@ void MotionControl::KeepDistance(int my_id, Robot* others)
 	Robot& r = others[my_id];
 	float default_range = 2; //当x或y坐标相同时，默认探测范围
 	int p_gap = 2; //间隔几个点检查，间隔越大，探测到的范围最大
-	int p_range = 3; //检查几个点开外的人，越大越远
-	int N = min(p_range, int(r.m_FutureRoad[0].size()-p_gap));; //6个点的future_road探测空间，或者future_road长度不够6时，取size-1
+	int p_range = 2; //检查几个点开外的人，越大越远
+	int N = min(p_range, int(r.m_FutureRoad[0].size()-p_gap));; //p_range个点的future_road探测空间，或者future_road长度不够6时，取size-1
 
 	if (N < 1)
 		return;
@@ -519,8 +579,8 @@ void MotionControl::KeepDistance(int my_id, Robot* others)
 			if (i != my_id)
 			{
 				//反向检查，如果该人与我反向，那么下面的判断大概率两人都停，所以不做停止操作
-				if (AngleDiff(r.GetDir(), others[i].GetDir()) > 2 * M_PI / 3)
-					return;
+				//if (AngleDiff(r.GetDir(), others[i].GetDir()) > 2 * M_PI / 3)
+				//	return;
 
 				pair<float, float> other_pos = others[i].GetPos(); //当前坐标
 				if ((p_next.first - p.first) == 0)

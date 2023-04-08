@@ -38,6 +38,7 @@ class MotionControl
 	//循迹
 	void TrackRoad(Robot& robot);
 	std::pair<float, float> CalTrackRoadV(Robot& robot, std::pair<float, float> target_point);
+	std::pair<float, float> NearWallSolver(pair<float, float> target_point); //将靠墙的点挪0.25的距离
 	void KeepDistance(int my_id, Robot* others);
 	void JumpPointSolver(Robot& r); //解决机器人提前出现在未来的点的情况，即跳点求解器
 	void CrossChasmSolver(Robot& r); //解决机器人穿越卡口时的卡顿问题

@@ -4,7 +4,7 @@
 #include <set>
 #include <cmath>
 #include <cstring>
-//#include<Windows.h>
+#include<Windows.h>
 #include<chrono>
 #include"Robot.h"
 #include"WorkTable.h"
@@ -32,7 +32,7 @@ set<pair<float, pair<int, int> > > DistanceOrder_robot[5];
 vector<vector<vector<pair<float, float> > > > Road(60, vector<vector<pair<float, float> > >(55));
 
 int main() {
-	//Sleep(5000);
+	//Sleep(9000);
 	io.Initialization(rm, robot, table, tableID_by_type, WorkTableNum, Road, DistanceOrder, DistanceOrder_robot);
 
 	while (!cin.eof()) {

@@ -24,9 +24,9 @@ class IO
 	float m_gap = 0.5; //¸ñ×Ó¼ä¾à
 	vector<A_Point *> open;
 	vector<A_Point *> close;
-	
 
 public:
+	int Map[102][102];
 	int CanGo_Map[102][102];
 	int CanGo_Map_NoGoods[102][102];
 	set<int> m_NoTable;

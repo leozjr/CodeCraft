@@ -579,7 +579,6 @@ void IO::Initialization(RobotManager & rm, Robot * robot,WorkTable * table, vect
 	int iter_robot = 0;
 	int iter_table = 0;
 	char InitialMap[102][102];
-	int Map[102][102];
 	vector<pair<float, float> > InitialWorkTablePos;
 	vector<pair<float, float> > InitialRobotPos;
 	vector<int> WorkTableType;

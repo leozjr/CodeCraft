@@ -63,7 +63,7 @@ void CongestionControl::Road_DFS(std::vector<int> iter_i, std::vector<int> iter_
 		for (int j : iter_j) {
 			pair<int, int> pos = make_pair(now_pos.first + i, now_pos.second + j);
 			pair<float, float> pos_xy = make_pair(0.25 + 0.5 * pos.second, 49.75 - 0.5 * pos.first);
-			if (distance(your_pos, pos_xy) > 2 && abs(pos.first - this->m_pos.first) < 8 && abs(pos.second - this->m_pos.second) < 8 && pos.first > 0 && pos.first < 100 && pos.second > 0 && pos.second < 100 && !this->m_Flag[pos.first][pos.second] && this->io->CanGo_Map[pos.first][pos.second] != 1) {
+			if (distance(your_pos, pos_xy) > 2 && abs(pos.first - this->m_pos.first) < 6 && abs(pos.second - this->m_pos.second) < 6 && pos.first > 0 && pos.first < 100 && pos.second > 0 && pos.second < 100 && !this->m_Flag[pos.first][pos.second] && this->io->CanGo_Map[pos.first][pos.second] != 1) {
 				bool flag_a = false;
 				for (int k = 0; k < avoider_pos.size(); k++) {
 					if (distance(my_pos, avoider_pos[k]) < 2) {
