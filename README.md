@@ -7,7 +7,7 @@
 
 复赛阻塞控制思路为：
 
-机器人记录自己走过的路(PastRoad)和未来要走的路(FutureRoad)，每走一个点就把FutureRoad中的点转移到PastRoad中，如果两机器人的FutureRoad重合，那么视为阻塞，按照优先级，一方进行回退操作，即调头走回头路，FutureRoad和PastRoad相应做回滚操作，直到找到不和对方路径重合的一块空间进行避让（避让路径记为ParkRoad），避让过程中监视对方机器人，如果对方机器人通过阻塞路段，即可继续行驶。
+机器人记录自己走过的路(PastRoad)和未来要走的路(FutureRoad)，每走一个点就把FutureRoad中的点转移到PastRoad中，如果两机器人的FutureRoad重合，那么视为阻塞，按照优先级，一方进行回退操作，即调头走回头路，FutureRoad和PastRoad相应做回滚操作，直到找到不和对方路径重合的一块空间进行避让（前往避让路径和返回记为ParkFutureRoad和ParkPastRoad），避让过程中监视对方机器人，如果对方机器人通过阻塞路段，即可继续行驶。
 
 > 注意： 回滚过程可能与其他机器人发生冲突，因此在判断阻塞时，每个机器人的FutureRoad不仅要和其他机器人的FutureRoad对比，还要和避让状态的ParkRoad对比，同时设置合适的优先级，进行多方避让。
 
