@@ -24,7 +24,7 @@
 
 ## 证书
 
-![](https://github.com/leozjr/CodeCraft/blob/master/Docs/证书.png)
+![](https://github.com/leozjr/CodeCraft/blob/master/Docs/证书.jpg)
 
 ## 复赛训练赛地图
 
