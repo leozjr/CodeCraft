@@ -22,6 +22,10 @@
 ## 未实现
 - 路径优化：如果两点之间直接可达，则可以直接直线行驶，需要对搜索出来的路径进行直线优化，未做（需要考虑算力问题）
 
+## 证书
+
+![](https://github.com/leozjr/CodeCraft/blob/master/Docs/证书.png)
+
 ## 复赛训练赛地图
 
 ![](https://github.com/leozjr/CodeCraft/blob/master/Docs/图1.png)
